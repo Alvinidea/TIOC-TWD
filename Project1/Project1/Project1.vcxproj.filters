@@ -15,22 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SOC-TWD.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="impl.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="preOp.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="FindingNeighbors.cpp">
+    <ClCompile Include="TIOC-TWD.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="UpdatingClustering.cpp">
+    <ClCompile Include="helpMethod.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

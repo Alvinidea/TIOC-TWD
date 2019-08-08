@@ -143,12 +143,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="FindingNeighbors.cpp" />
-    <ClCompile Include="impl.cpp" />
+    <ClCompile Include="helpMethod.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="preOp.cpp" />
-    <ClCompile Include="SOC-TWD.cpp" />
-    <ClCompile Include="UpdatingClustering.cpp" />
+    <ClCompile Include="TIOC-TWD.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="initStructure.h" />

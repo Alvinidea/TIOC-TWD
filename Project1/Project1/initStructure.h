@@ -25,11 +25,15 @@ public:
 	//构造函数
 	X(double *v, int attrs)
 	{
-		val = (double*)malloc(sizeof(double)*attrs);
+		val = new double[attrs];
 		no = v[0];
 		for (int i = 0; i < attrs; i++)
 			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][1 到 attrs-1]存的才是属性值 
 			val[i] = v[i + 1];
+	}
+	~X()
+	{
+		delete[]val;
 	}
 	//获取属性值
 	double getVal(int i)
@@ -73,6 +77,16 @@ public:
 				*(*(distance + i) + j) = 0;
 			}
 		}
+	}
+
+	~Distance()
+	{
+		for (int i = 0; i < NUM + 1; i++)
+		{
+			delete[] * (distance + i);
+		}
+		delete[] distance;
+		delete[] state;
 	}
 
 	//计算欧里几德距离
@@ -202,28 +216,6 @@ public:
 	}
 };
 
-//center记录邻居集合   的    类
-class RNeighbor {
-public:
-	// 中心 （本记录记录号码）
-	RP *center;
-	// 邻居数目
-	int count;
-	// 邻居的集合
-	vector<RP*> Nei;
-
-
-	RNeighbor(RP * cente)
-	{
-		count = 0;
-		center = cente;
-	}
-	void addNeighbor(RP* newNeighbor)
-	{
-		Nei.push_back(newNeighbor);
-		count++;
-	}
-};
 
 /*
 -- 代表点Representation point
@@ -239,19 +231,17 @@ public:
 	// 覆盖的对象集合
 	vector<int> Cover;
 
+	//RNeighbor* rpNeighbor;
+	vector<RP*> *rpNeighbor;
 	//大小为属性的数目  left代表属性下界   right 代表属性上界
 	double *left;
 
 	double *right;
-
-	RNeighbor *rpNeighbor;
 	//Neis是Xi的覆盖区域
 	RP(int rp, vector<int> Neis, int attrs)
 	{
-		left = (double *)malloc(sizeof(double)*attrs);
-		right = (double *)malloc(sizeof(double)*attrs);
-
-
+		left = new double[attrs];
+		right = new double[attrs];
 		for (int i = 0; i < attrs; i++)
 		{
 			*(left + i) = MAX;
@@ -262,9 +252,16 @@ public:
 		//设置覆盖点
 		setCover(Neis);
 
-		rpNeighbor = new RNeighbor(this);
+		//rpNeighbor = new RNeighbor(this);
+		rpNeighbor = new vector<RP*>();
 	}
 
+	~RP()
+	{
+		delete[] left;
+		delete[] right;
+		delete rpNeighbor;
+	}
 	void setRepresentationPoint(int x)
 	{
 		representationPoint = x;
@@ -308,6 +305,34 @@ public:
 	}
 };
 
+//center记录代表点邻居集合   的    类
+class RNeighbor {
+public:
+	// 中心 （本记录记录号码）
+	RP *center;
+	// 邻居数目
+	int count;
+	// 邻居的集合
+	vector<RP*> Nei;
+
+
+	RNeighbor(RP * cente)
+	{
+		count = 0;
+		center = cente;
+	}
+	~RNeighbor()
+	{
+		delete center;
+	}
+
+	void addNeighbor(RP* newNeighbor)
+	{
+		Nei.push_back(newNeighbor);
+		count++;
+	}
+};
+
 /*
 	搜索树的树结点
 */
@@ -335,6 +360,13 @@ public:
 		sons_Node = new vector<Node*>();
 		father_Node = father;
 		R = new vector<RP*>();
+	}
+
+	~Node()
+	{
+		delete R;
+		delete sons_Node;
+		delete father_Node;
 	}
 
 	//添加孩子结点
@@ -389,6 +421,16 @@ class Similarity
 			}
 		}
 	}
+	//N：记录数目  初始化
+	~Similarity()
+	{
+		for (int j = 0; j < NUM + 1; j++)
+		{
+			delete[] * (similarity + j);
+		}
+		delete[] similarity;
+	}
+
 
 	//设置 i代表行记录号   j代表列记录号  val是要设置的值
 	void setSimilarVal(int i, int j, double val)
@@ -437,6 +479,15 @@ public:
 				*(*(G + i) + j) = 0;
 			}
 		}
+	}
+
+	~Graph()
+	{
+		for (int j = 0; j < RN; j++)
+		{
+			delete[] * (G + j);
+		}
+		delete[] G;
 	}
 
 	//ri和rj之间设置强连接
@@ -590,6 +641,12 @@ public:
 		BND = new set<int>();
 	}
 
+	~Cluster()
+	{
+		delete POS;
+		delete BND;
+	}
+
 	RP* getRPbyNum(int key, Graph *G)
 	{
 		return G->getMapping(key);
@@ -612,7 +669,6 @@ public:
 		}
 	}
 };
-
 
 //####################################################################################
 //	算法1 2 的公共方法声明
@@ -643,230 +699,6 @@ int getINodesI(set<Node*> *Nodes);
 bool cmpRP(RP *r1, RP *r2);
 
 
-
-//####################################################################################
-//	算法1 2 的公共方法实现
-//####################################################################################
-
-//邻居集的邻居数目降序排序
-bool cmpNeighbor(const Neighbor *nFirst, const Neighbor *nSecond)
-{
-	if (nFirst->count > nSecond->count) //由大到小排序 注意 == 时候  必须返回false
-	{
-		return true;
-	}
-	return false;
-}
-
-//获取根据记录号获取 记录的邻居集合
-void getNeighborByRecord(vector<Neighbor*> &neighbors, int record, vector<int>& nei)
-{
-	int flag = 0, i = 0;
-	for (; i < neighbors.size(); i++)
-	{
-		if (neighbors[i]->center == record)
-		{
-			flag = 1;
-			nei = neighbors[i]->Nei;
-			break;
-		}
-
-	}
-}
-
-
-/*
--- 计算代表点之间的欧里几德距离
-*/
-double getRPDistance(RP *x, RP *y, int attrs)
-{
-	double ret, sum, temp;
-	ret = sum = temp = 0;
-	for (int i = 0; i < attrs; i++)
-	{
-		double xi = x->getLeft(i);
-		double yi = y->getLeft(i);
-		if (xi == MAX || yi == MAX)
-		{
-			return MAX;
-		}
-		temp = xi - yi;
-		temp = pow(temp, 2);
-		sum += temp;
-	}
-	ret = sqrt(sum);
-	sum = 0;
-	for (int j = 0; j < attrs; j++)
-	{
-		temp = x->getRight(j) - y->getRight(j);
-		temp = pow(temp, 2);
-		sum += temp;
-	}
-	ret += sqrt(sum);
-	return ret;
-}
-
-
-/*
-计算两个代表点的相似度
-Similarity = 【  Cover(i) 交 Cover(j) 】 / min{Cover(i) ，Cover(j)}
-*/
-double computeSimilarity(RP* ri, RP* rj)
-{
-	set<int> *ri_cover = new set<int>();
-	set<int> *rj_cover = new set<int>();
-	vector<int>::iterator insert_iterator;
-	set<int> *res = new set<int>();//存储交集结果
-
-	double min, inter, isize, jsize;
-	double ret;
-	for (int i = 0; i < ri->getCoverSize(); i++)
-	{
-		ri_cover->insert(ri->getCoverVal(i));
-	}
-	for (int j = 0; j < rj->getCoverSize(); j++)
-	{
-		rj_cover->insert(rj->getCoverVal(j));
-	}
-	jsize = rj_cover->size();
-	isize = ri_cover->size();
-	min = isize < jsize ? isize : jsize;
-	//
-	//std::set_intersection(ri_cover->begin(), ri_cover->end(), ri_cover->begin(), ri_cover->end(), res->begin());
-	inter = res->size();
-	ret = inter / min;
-	return ret;
-}
-
-
-//####################################################################################
-//算法3  4 公共算法的实现
-//####################################################################################
-
-//获取结点数目
-int getINodesI(set<Node*> *Nodes)
-{
-	return Nodes->size();
-}
-//RP结点的比较函数
-bool cmpRP(RP *r1, RP *r2)
-{
-	if (r1->getLeft(1) > r2->getLeft(1))
-		return true;
-	return false;
-}
-
-/*
-function：判断一个代表点的第layer个属性  是否与Node中的代表点相似
-	rp：代表点
-	node：结点
-	layer：第几层 （根结点为第0层）
-*/
-bool isSimilarity(Node * node, RP* rp, int layer)
-{
-	double rp_left = rp->getLeft(layer);
-	double rp_right = rp->getRight(layer);
-	vector<RP*> *R = node->R;
-	vector<RP*>::iterator it;
-	for (it = R->begin(); it != R->end(); it++)
-	{
-		/*由于
-		rp 第layer个属性的下界值  大于  node中所有代表点的第layer个属性的下界值
-		（因为排过序了）
-		所以判断  （A）rp第layer个属性的下界值  和  （B）node中所有代表点的第layer个属性的上界值 就好
-		如果（B）>（A）  说明有相似返回 true
-		*/
-		if (((*it)->right)[layer] > rp_left)
-			return true;
-	}
-	return false;
-}
-
-
-/*
-	将 newNode结点 融合到 treeNode结点
-	俩个结点融合后
-	：父节点不变,但是父亲结点对应孩子结点newNode需要删除
-	：代表点集合融合
-	：孩子结点融合
-	：上下界重新计算
-*/
-void merge(Node* treeNode, Node* newNode)
-{
-	//重新计算上下界
-	if (treeNode->low > newNode->low)
-		treeNode->low = newNode->low;
-	if (treeNode->high < newNode->high)
-		treeNode->high = newNode->high;
-	vector<RP*> *R = newNode->R;
-	vector<RP*>::iterator it_r;
-	//代表点的融合
-	for (it_r = R->begin(); it_r != R->end(); it_r++)
-		treeNode->add_RP(*it_r);
-
-	//孩子结点的融合
-	vector<Node*> *sons_Node = newNode->sons_Node;
-	vector<Node*>::iterator it_s;
-	for (it_s = sons_Node->begin(); it_s != sons_Node->end(); it_s++)
-		treeNode->add_SonNode(*it_s);
-	//删除father结点的孩子结点newNode
-	Node* father = treeNode->father_Node;
-	vector<Node*> *f_s = father->sons_Node;
-	vector<Node*>::iterator it_son;
-	bool flag = false;
-	for (it_son = f_s->begin(); it_son != f_s->end(); it_son++)
-	{
-		if (*it_son == newNode)
-		{
-			f_s->erase(it_son);
-			flag = true;
-			break;
-		}
-	}
-}
-
-//联合
-bool isSimilarityNN(Node * node, Node * nnode, int layer)
-{
-	RP *rp = nnode->R->at(0);
-	return isSimilarity(node, rp, layer);
-}
-
-//结点的比较函数
-bool cmpNN(Node *r1, Node *r2)
-{
-	if (r1->low > r2->low)
-		return true;
-	return false;
-}
-
-/*
-Input:
-	R:	代表点集合
-	G:
-	alpha:
-	beta:
-	threshold: 阈值
-Output:
-	C:	聚类
-*/
-double getDistanceRX(int rd, RP* rp, double **U2, int attrs)
-{
-	double ret, sum, temp;
-	int j = rp->representationPoint;
-	X x = X(*(U2 + rd - 1), attrs);
-	X y = X(*(U2 + j - 1), attrs);
-	ret = sum = temp = 0;
-	for (int i = 0; i < attrs; i++)
-	{
-		temp = x.getVal(i) - y.getVal(i);
-		temp = pow(temp, 2);
-		sum += temp;
-	}
-	ret = sqrt(sum);
-	return ret;
-}
-
 //####################################################################################
 //	四个算法的声明
 //####################################################################################
@@ -881,6 +713,9 @@ threshold 阈值
 */
 void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double threshold);
 
+/*
+默认参数只需在声明的时候写出来
+*/
 void CST(vector<RP*> *R, int *A, int attrs, double threshold = 0.9);
 
 void FindingNeighbors(Node* Root, RP* r_wait, double threshold, 
@@ -896,130 +731,17 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph,
 //####################################################################################
 
 //打印邻居集合
-void printNei(const vector<Neighbor*> *neis)
-{
-	cout << "==========================================" << endl;
-	cout <<"打印邻居集合。。。。。。。" << endl;
-	cout << "==========================================" << endl;
-	for (int i = 0; i < neis->size(); i++)
-	{
-		Neighbor* nei = (*neis)[i];
-		cout << "中心点：" << nei->center << " ; ";
-		cout << '\t' << "邻居数目：" << nei->count << " ; ";
-		for (int j = 0; j < nei->Nei.size(); j++)
-		{
-			cout << (nei->Nei)[j] << " , ";
-		}
-		cout << endl;
-	}
-}
+void printNei(const vector<Neighbor*> *neis);
 
 //打印代表点集合
-void printR(const vector<RP*> *R,int attrs)
-{
-	cout << "==========================================" << endl;
-	cout << "打印代表点集合。。。。。。。" << endl;
-	cout << "==========================================" << endl;
-	for (int i = 0; i < R->size(); i++)
-	{
-		RP* rp = (*R)[i];
-		cout <<"代表点："<< rp->representationPoint << endl;
-		cout << '\t'<< "覆盖域：";
-		for (int j = 0; j < rp->Cover.size(); j++)
-		{
-			cout << (rp->Cover)[j] <<" , ";
-		}
-		cout << endl <<'\t'<<"属性下界：";
-		for (int j = 0; j < attrs; j++)
-		{
-			cout << (rp->left)[j] << '\t';
-		}
-		cout << endl << '\t' << "属性上界：";
-		for (int j = 0; j < attrs; j++)
-		{
-			cout << (rp->right)[j] << '\t';
-		}
-		cout << endl;
-	}
-}
+void printR(const vector<RP*> *R, int attrs);
 
 //打印记录状态矩阵
-void printState(Distance *distance)
-{
-	cout << "==========================================" << endl;
-	cout << "打印记录状态矩阵:" << endl;
-	cout << "==========================================" << endl;
-	for (int i = 1; i < distance->NUM + 1; i++)
-		cout << distance->state[i] << "  ";
-	cout << endl;
-}
+void printState(Distance *distance);
 //打印代表点de 图
-void printG(Graph *graph)
-{
-	cout << "==========================================" << endl;
-	cout << "打印代表点所组成的 Strong AND Weak图:" << endl;
-	cout << "==========================================" << endl;
-	for (int i = 0; i < graph->RN; i++)
-	{
-		for (int j = 0; j < graph->RN; j++)
-		{
-			cout << *(*((graph->G) + i) + j) << "  ";
-		}
-		cout << endl;
-	}
-}
+void printG(Graph *graph);
 
 //打印强关联子图 和 弱关联子图
-void printGR(Graph *graph)
-{
-	cout << "==========================================" << endl;
-	cout << "打印强关联子图 和 弱关联子图" << endl;
-	cout << "==========================================" << endl;
-	// vector<int> 中存的是在矩阵行或列中的位置   可以   映射到代表点的指针
-	list<vector<int>*>::iterator it;
-	//
-	list<set<int>*>::iterator itW;
+void printGR(Graph *graph);
 
-	set<int>::iterator itW2;
-	int itr = 0;
-	for (it = graph->subGraphs.begin(), itW = graph->subGraphsWeak.begin();
-		it != graph->subGraphs.end();
-		it++, itW++)
-	{
-		itr++;
-		cout << "第"<<itr<<"个强关联子图："<<'\t';
-		for (int j = 0; j < (*it)->size(); j++)
-		{
-			cout << graph->getMapping((*(*it))[j])->representationPoint << "  ";
-		}
-
-		cout << '\t' << "第" << itr << "个弱关联子图：" << '\t';
-		for (itW2 = (*itW)->begin(); itW2 != (*itW)->end(); itW2++) {
-
-			//根据 存储的矩阵行或列中的位置      映射到    代表点的指针
-			cout << graph->getMapping(*itW2)->representationPoint << "  ";
-		}
-		cout << endl;
-	}
-}
-
-void printCluster(vector<Cluster*> *clusters)
-{
-	cout << "==========================================" << endl;
-	cout << "打印聚类" << endl;
-	cout << "==========================================" << endl;
-	vector<Cluster*>::iterator it;
-	int itr = 0;
-	for (it = clusters->begin(); it != clusters->end(); it++)
-	{
-		itr++;
-		cout << "第" << itr << "个聚类：" << '\t';
-		Cluster* cl = *it;
-		set<int>::iterator itPos;
-		for (itPos = cl->POS->begin(); itPos != cl->POS->end(); itPos++)
-		{
-			cout << *itPos << '\t';
-		}
-		cout << endl;
-	}
-}
+void printCluster(vector<Cluster*> *clusters);
