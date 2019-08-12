@@ -17,16 +17,15 @@ bool cmpNeighbor(const Neighbor *nFirst, const Neighbor *nSecond)
 }
 
 //获取根据记录号获取 记录的邻居集合
-void getNeighborByRecord(vector<Neighbor*> &neighbors, int record, vector<int>& nei)
+vector<int>* getNeighborByRecord(vector<Neighbor*> *neighbors, int record)
 {
 	int flag = 0, i = 0;
-	for (; i < neighbors.size(); i++)
+	for (; i < neighbors->size(); i++)
 	{
-		if (neighbors[i]->center == record)
+		if ((*neighbors)[i]->center == record)
 		{
 			flag = 1;
-			nei = neighbors[i]->Nei;
-			break;
+			return (*neighbors)[i]->Nei;
 		}
 
 	}
@@ -102,13 +101,54 @@ int getINodesI(set<Node*> *Nodes)
 {
 	return Nodes->size();
 }
-//RP结点的比较函数
-bool cmpRP(RP *r1, RP *r2)
+
+//-----------------------------------------------------------------
+
+bool cmpRP_Big(RP* r1, RP* r2, int layer)
 {
-	if (r1->getLeft(1) > r2->getLeft(1))
-		return true;
-	return false;
+	double l1 = r1->getLeft(layer);
+	double l2 = r2->getLeft(layer);
+	return (l1 >= l2) ? true : false;
 }
+bool cmpRP_Small(RP* r1, RP* r2, int layer)
+{
+	double l1 = r1->getLeft(layer);
+	double l2 = r2->getLeft(layer);
+	return (l1 <= l2) ? true : false;
+}
+vector<RP*>::iterator Partition(vector<RP*>*, vector<RP*>::iterator low,
+	vector<RP*>::iterator high, int layer)
+{
+	vector<RP*>::value_type pivokey = *low;
+	while (low < high)
+	{
+		while (low < high && cmpRP_Big(pivokey, *high, layer)) high--; // 若此处为 *high >= pivokey; 则对于5 8 5，进行快速排序仍然为 5 8 5， 不能将
+		// 序列变为 5 5 8. 且最后high和low均为第一个元素，故QSort中iter-1会出现越界错误;
+		*low = *high;
+		while (low < high && cmpRP_Small(pivokey, *low, layer)) low++;
+		*high = *low;
+		/*
+		while (low < high && *high > pivokey) high--; // 若此处为 *high >= pivokey; 则对于5 8 5，进行快速排序仍然为 5 8 5， 不能将
+		// 序列变为 5 5 8. 且最后high和low均为第一个元素，故QSort中iter-1会出现越界错误;
+		*low = *high;
+		while (low < high && *low <= pivokey) low++;
+		*high = *low;
+		*/
+	}
+	*low = pivokey;
+	return low;
+}
+void QSort(vector<RP*>* ivec, vector<RP*>::iterator low, vector<RP*>::iterator high, int layer)
+{
+	if (low < high)
+	{
+		vector<RP*>::iterator iter = Partition(ivec, low, high, layer);
+		QSort(ivec, low, iter - 1, layer);
+		QSort(ivec, iter + 1, high, layer);
+	}
+}
+//-----------------------------------------------------------------
+
 
 /*
 function：判断一个代表点的第layer个属性  是否与Node中的代表点相似
@@ -234,9 +274,10 @@ void printNei(const vector<Neighbor*> *neis)
 		Neighbor* nei = (*neis)[i];
 		cout << "中心点：" << nei->center << " ; ";
 		cout << '\t' << "邻居数目：" << nei->count << " ; ";
-		for (int j = 0; j < nei->Nei.size(); j++)
+		vector<int> *Nei = nei->Nei;
+		for (int j = 0; j < Nei->size(); j++)
 		{
-			cout << (nei->Nei)[j] << " , ";
+			cout << (*Nei)[j] << " , ";
 		}
 		cout << endl;
 	}
@@ -253,9 +294,9 @@ void printR(const vector<RP*> *R, int attrs)
 		RP* rp = (*R)[i];
 		cout << "代表点：" << rp->representationPoint << endl;
 		cout << '\t' << "覆盖域：";
-		for (int j = 0; j < rp->Cover.size(); j++)
+		for (int j = 0; j < rp->Cover->size(); j++)
 		{
-			cout << (rp->Cover)[j] << " , ";
+			cout << (*(rp->Cover))[j] << " , ";
 		}
 		cout << endl << '\t' << "属性下界：";
 		for (int j = 0; j < attrs; j++)
@@ -373,7 +414,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 	// R 存放代表点的容器
 	vector<RP*> *R = new vector<RP*>();
 	// neighbors 存放各个记录的所有邻居的容器
-	vector<Neighbor*> neighbors;
+	vector<Neighbor*> *neighbors = new vector<Neighbor*>();
 	// distance 存放两个记录之间距离的矩阵
 	Distance *distance = new Distance(N);
 
@@ -394,7 +435,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 		Neighbor *nei = new Neighbor(i);
 		for (int j = 1; j < N + 1; j++)
 		{
-			if (i == j)//邻居不需要计算自身
+			if (i == j)			//邻居不需要计算自身
 				;
 			else
 			{//判断两个对象的距离是否 <= threshold
@@ -405,18 +446,18 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 			}
 		}
 		//存储 Xi 的邻居数目
-		nei->count = nei->Nei.size();
+		nei->count = nei->Nei->size();
 		// 存入所有点的邻居集
-		neighbors.push_back(nei);
+		neighbors->push_back(nei);
 	}
 	/*----------------------------------------------------------------------------
 	-- 对neighbors排序
 	-- 按每个Xi（对象|记录）的邻居数目降序排序
 	----------------------------------------------------------------------------*/
 
-	printNei(&neighbors);
-	std::sort(neighbors.begin(), neighbors.end(), cmpNeighbor);
-	printNei(&neighbors);
+	printNei(neighbors);
+	std::sort(neighbors->begin(), neighbors->end(), cmpNeighbor);
+	printNei(neighbors);
 	/*----------------------------------------------------------------------------
 	-- 创建 R 代表点集合,并将所有代表点加入进去
 	-- RP 包括 代表点   覆盖区域   属性上 和 下界
@@ -429,14 +470,15 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 		if (record == -1)//说明已经删完了
 			break;
 		// 存放邻居集合
-		vector<int> nei;
+		vector<int> *nei = getNeighborByRecord( neighbors, record);
 		// 获取nei  根据记录号 在 存放所有记录邻居集合 中获取对应邻居集合
-		getNeighborByRecord(neighbors, record, nei);
+		
 		//生成代表点 设置代表记录  和  覆盖区域   初始化属性值上下界
-		RP *rp = new RP(record, nei, attrs);
-		for (int i = 0; i < rp->Cover.size(); i++)
+		RP *rp = new RP(record, &nei, attrs);
+
+		for (int i = 0; i < rp->Cover->size(); i++)
 		{
-			int reco = (rp->Cover)[i];
+			int reco = (*(rp->Cover))[i];
 			//设置代表点的 属性上|下界
 			for (int attr = 0; attr < attrs; attr++)
 			{
@@ -475,7 +517,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 			{
 				//获得代表点之间的距离
 				double distance = getRPDistance(ri, rj, attrs);
-				if (distance <= 2 * threshold)
+				if (distance <= 5 * threshold)
 				{
 					rnei->push_back(rj);
 				}
@@ -585,8 +627,14 @@ void CST(vector<RP*> *R, int *A,int attrs, double threshold)
 			//	cmpRP函数  根据第 layer 层（属性）进行排序
 			//=========================================================================
 			vector<RP*> *R = (*it_node_ij)->R;
-			// 对上界还是下界排序 ？ 第几个属性？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？  
-			std::sort(R->begin(),R->end(), cmpRP);
+			// 对上界还是下界排序 ？ 第几个属性 ？ 
+			// 下界left 第layer个属性
+			vector<RP*>::iterator low = R->begin();
+			vector<RP*>::iterator high = R -> end();
+			QSort(R, low, high, layer);
+
+			//std::sort(R->begin(),R->end(), cmpRP);
+			
 			//=========================================================================
 			//	创建第 i+1 层新结点（设置它的层数 和 父亲结点）
 			//	将上层父亲节点 经过排序后的代表点集合的 第一个 代表点    加入到该节点中
@@ -834,7 +882,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 		FindingNeighbors(root, r_wait, threshold, attrs, R_neighbor, Path);
 
 		vector<int>::iterator it_x;
-		vector<int>* cover = &(r_wait->Cover);
+		vector<int>* cover = r_wait->Cover;
 		//存储没有映射到R_neighbor的记录|对象
 		vector<double> *noMapping = new vector<double>();
 		//（2）=========================================================================
@@ -860,7 +908,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 				double dist = getDistanceRX(x, rp, U2, attrs);
 				if (dist <= threshold)//判断条件
 				{
-					rp->Cover.push_back(x);
+					rp->Cover->push_back(x);
 					flag = false;
 				}
 			}
@@ -880,7 +928,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 			for (it_rp = R_neighbor->begin(); it_rp != R_neighbor->end(); it_rp++)
 			{
 				RP* rp = *it_rp;
-				vector<int>* cover2 = &(rp->Cover);
+				vector<int>* cover2 = rp->Cover;
 				// 遍历邻居代表点中的记录(对象)
 				for (it_x = cover2->begin(); it_x != cover2->end(); it_x++)
 				{
@@ -891,7 +939,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 					{
 						//Cover(r_wait) = Cover(r_wait) U x
 						//邻居点对象放入到 r_wait 代表点的覆盖域
-						r_wait->Cover.push_back(x);
+						r_wait->Cover->push_back(x);
 					}
 				}
 			}

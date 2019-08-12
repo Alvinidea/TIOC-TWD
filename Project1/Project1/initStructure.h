@@ -28,12 +28,17 @@ public:
 		val = new double[attrs];
 		no = v[0];
 		for (int i = 0; i < attrs; i++)
-			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][1 到 attrs-1]存的才是属性值 
+			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][ 1 到 attrs-1]存的才是属性值 
 			val[i] = v[i + 1];
 	}
 	~X()
 	{
-		delete[]val;
+		cout << no << " : ";
+		for (int i = 0; i < 5; i++)
+			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][ 1 到 attrs-1]存的才是属性值 
+			cout<< "   "<< val[i];
+		cout << endl;
+		delete[] val;
 	}
 	//获取属性值
 	double getVal(int i)
@@ -90,14 +95,14 @@ public:
 	}
 
 	//计算欧里几德距离
-	double getDistance(X x, X y, int attrs)
+	double getDistance(X *x, X *y, int attrs)
 	{
 		// ret = sqrt( ∑ pow(x(i)-y(i)) )
 		double ret, sum, temp;
 		ret = sum = temp = 0;
 		for (int i = 0; i < attrs; i++)
 		{
-			temp = x.getVal(i) - y.getVal(i);
+			temp = x->getVal(i) - y->getVal(i);
 			temp = pow(temp, 2);
 			sum += temp;
 		}
@@ -122,8 +127,8 @@ public:
 					;
 				else
 				{	//计算距离，使用欧几里德距离
-					X x = X(*(U + i - 1), attrs);
-					X y = X(*(U + j - 1), attrs);
+					X *x = new X(*(U + i - 1), attrs);
+					X *y = new X(*(U + j - 1), attrs);
 					setDisVal(i, j, getDistance(x, y, attrs));
 				}
 			}
@@ -201,17 +206,18 @@ public:
 	// 邻居数目
 	int count;
 	// 邻居的集合
-	vector<int> Nei;
-
+	//vector<int> Nei;
+	vector<int> *Nei;
 
 	Neighbor(int cente)
 	{
 		count = 0;
 		center = cente;
+		Nei = new vector<int>();
 	}
 	void addNeighbor(int newNeighbor)
 	{
-		Nei.push_back(newNeighbor);
+		Nei->push_back(newNeighbor);
 		//count++;
 	}
 };
@@ -229,7 +235,7 @@ public:
 	//代表点  
 	int representationPoint;
 	// 覆盖的对象集合
-	vector<int> Cover;
+	vector<int> *Cover;
 
 	//RNeighbor* rpNeighbor;
 	vector<RP*> *rpNeighbor;
@@ -238,7 +244,7 @@ public:
 
 	double *right;
 	//Neis是Xi的覆盖区域
-	RP(int rp, vector<int> Neis, int attrs)
+	RP(int rp, vector<int> **Neis, int attrs)
 	{
 		left = new double[attrs];
 		right = new double[attrs];
@@ -267,21 +273,21 @@ public:
 		representationPoint = x;
 	}
 
-	void setCover(vector<int> &x)
+	void setCover(vector<int> **x)
 	{
-		Cover = x;
+		Cover = *x;
 	}
 
 	//获取覆盖的大小
 	int getCoverSize()
 	{
-		return Cover.size();
+		return Cover->size();
 	}
 
 	//获取覆盖的大小
 	int getCoverVal(int i)
 	{
-		return Cover.at(i);
+		return Cover->at(i);
 	}
 
 	//根据属性下标（第几个下标）获取属性值
@@ -671,12 +677,14 @@ public:
 };
 
 //####################################################################################
-//	算法1 2 的公共方法声明
 //####################################################################################
+//####################################################################################
+//####################################################################################
+
 //邻居集的邻居数目降序排序
 bool cmpNeighbor(const Neighbor *nFirst, const Neighbor *nSecond);
 //获取根据记录号获取 记录的邻居集合
-void getNeighborByRecord(vector<Neighbor*> &neighbors, int record, vector<int>& nei);
+vector<int>* getNeighborByRecord(vector<Neighbor*> *neighbors, int record);
 /*
 -- 计算代表点之间的欧里几德距离
 */
@@ -697,7 +705,10 @@ bool isSimilarityNN(Node * node, Node * nnode, int layer);
 int getINodesI(set<Node*> *Nodes);
 //RP结点的比较函数
 bool cmpRP(RP *r1, RP *r2);
-
+void QSort(vector<RP*>* ivec, vector<RP*>::iterator low, vector<RP*>::iterator high, int layer);
+vector<RP*>::iterator Partition(vector<RP*>*, vector<RP*>::iterator low, vector<RP*>::iterator high, int layer);
+bool cmpRP_Big(RP* r1, RP* r2, int layer);
+bool cmpRP_Small(RP* r1, RP* r2, int layer);
 
 //####################################################################################
 //	四个算法的声明

@@ -145,7 +145,6 @@
   <ItemGroup>
     <ClCompile Include="helpMethod.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="preOp.cpp" />
     <ClCompile Include="TIOC-TWD.cpp" />
   </ItemGroup>
   <ItemGroup>

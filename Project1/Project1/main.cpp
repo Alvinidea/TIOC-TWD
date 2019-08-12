@@ -69,6 +69,6 @@ int main()
 	}
 	cout << "数据预处理完成。。。" << endl;
 	SOC_TWD(arr, count, 5, 0.06, 0.03, 2);
-
+	getchar();
 	return 0;
 }
