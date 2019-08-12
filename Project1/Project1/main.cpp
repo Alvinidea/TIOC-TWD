@@ -32,7 +32,7 @@ void getData(double *arr[], int &i)
 		double *ar = (double*)malloc(6 * sizeof(double));
 		j = 0;
 		in >> floa >> dou;
-		ar[j++] = i+1;
+		ar[j++] = i;
 		ar[j++] = floa;
 
 		in >> floa >> dou;

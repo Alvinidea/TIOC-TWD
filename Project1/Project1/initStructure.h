@@ -48,6 +48,163 @@ public:
 
 };
 
+/*
+	center记录邻居集合   的    类
+	center ： 记录号（中心）
+	count ：邻居数目
+	Nei ： 邻居集合
+*/
+class Neighbor {
+public:
+	// 中心 （本记录记录号码）
+	int center;
+	// 邻居数目
+	int count;
+	// 邻居的集合
+	//vector<int> Nei;
+	vector<int> *Nei;
+
+	Neighbor(int cente)
+	{
+		count = 0;
+		center = cente;
+		Nei = new vector<int>();
+	}
+	~Neighbor()
+	{
+		delete Nei;
+	}
+	void addNei(int newNeighbor)
+	{
+		Nei->push_back(newNeighbor);
+		//count++;
+	}
+	int getNeiSize()
+	{
+		return Nei->size();
+	}
+
+	vector<int>* getNei()
+	{
+		return Nei;
+	}
+};
+
+
+/*
+-- 代表点Representation point
+-- representationPoint : 代表记录
+-- Cover : 代表点 所代表的 对象集合
+-- left : 各个属性的属性值下界
+-- right : 各个属性的属性值上界
+*/
+class RP {
+public:
+	//代表点  
+	int representationPoint;
+	// 覆盖的对象集合
+	vector<int> *Cover;
+
+	//RNeighbor* rpNeighbor;
+	vector<RP*> *rpNeighbor;
+	//大小为属性的数目  left代表属性下界   right 代表属性上界
+	//double *left;
+	vector<double> left;
+	vector<double> right;
+	//double *right;
+	//Neis是Xi的覆盖区域
+	RP(int rp, vector<int> **Neis, int attrs)
+	{
+		//left = new double[attrs];
+		//right = new double[attrs];
+		left.resize(attrs);
+		right.resize(attrs);
+		for (int i = 0; i < attrs; i++)
+		{
+			//*(left + i) = MAX;
+			//*(right + i) = MIN;
+			left[i] = MAX;
+			right[i] = MIN;
+		}
+		//设置代表点
+		setRepresentationPoint(rp);
+		//设置覆盖点
+		setCover(Neis);
+
+		//rpNeighbor = new RNeighbor(this);
+		rpNeighbor = new vector<RP*>();
+	}
+
+	~RP()
+	{
+		delete Cover;
+		delete rpNeighbor;
+	}
+	void setLeftAndRight(double *U[],int attrs)
+	{
+		double temp = 0;
+		for (int i = 0; i < attrs; i++)
+		{
+			temp = *(*(U + representationPoint) + i+1);
+			right[i] = temp;
+			left[i] = temp;
+		}
+	}
+
+	void setRepresentationPoint(int x)
+	{
+		representationPoint = x;
+	}
+
+	void setCover(vector<int> **x)
+	{
+		//Cover->assign((*x)->begin(), (*x)->end());
+		Cover = *x;
+	}
+
+	//Cover 添加数据
+	void CoverPush(int x)
+	{
+		Cover->push_back(x);
+	}
+	//获取覆盖的大小
+	int getCoverSize()
+	{
+		return Cover->size();
+	}
+
+	//获取覆盖的下标对应的值
+	int getCoverVal(int i)
+	{
+		return Cover->at(i);
+	}
+
+	//根据属性下标（第几个下标）获取属性值
+	double getLeft(int i)
+	{
+		//return *(left + i);
+		return left[i];
+	}
+
+	double getRight(int i)
+	{
+		//return *(right + i);
+		return right[i];
+	}
+	//根据属性下标（第几个下标）获取属性值
+	void setLeft(int i, double val)
+	{
+		//*(left + i) = val;
+		left[i] = val;
+	}
+	void setRight(int i, double val)
+	{
+		//*(right + i) = val;
+		right[i] = val;
+	}
+};
+
+
 class Distance {
 public:
 	//距离矩阵
@@ -181,166 +338,25 @@ public:
 
 	若所有记录都是 已删除 的状态   则return -1
 	*/
-	int getFirstRecord()
+
+	int getFirstRecord(vector<Neighbor*> *neighbors)
 	{
 		//返回遇到的第一个状态为 未删除 的
-		for (int i = 0; i < NUM ; i++)
+		vector<Neighbor*>::iterator it;
+		for (it = neighbors->begin(); it != neighbors->end(); it++)
 		{
 			//if (*(state + i) == 0)
-			if (state[i] == 0)
-			{
-				deleteRows(i);
-				return i;
+			int row = (*it)->center;
+			if (state[row] == 0)
+			{	
+				deleteRows(row);
+				return row;
 			}
 		}
 		return -1;
 	}
 };
 
-/*
-	center记录邻居集合   的    类
-	center ： 记录号（中心）
-	count ：邻居数目
-	Nei ： 邻居集合
-*/
-class Neighbor {
-public:
-	// 中心 （本记录记录号码）
-	int center;
-	// 邻居数目
-	int count;
-	// 邻居的集合
-	//vector<int> Nei;
-	vector<int> *Nei;
-
-	Neighbor(int cente)
-	{
-		count = 0;
-		center = cente;
-		Nei = new vector<int>();
-	}
-	~Neighbor()
-	{
-		delete Nei;
-	}
-	void addNei(int newNeighbor)
-	{
-		Nei->push_back(newNeighbor);
-		//count++;
-	}
-	int getNeiSize()
-	{
-		return Nei->size();
-	}
-
-	vector<int>* getNei()
-	{
-		return Nei;
-	}
-};
-
-
-/*
--- 代表点Representation point
--- representationPoint : 代表记录
--- Cover : 代表点 所代表的 对象集合
--- left : 各个属性的属性值下界
--- right : 各个属性的属性值上界
-*/
-class RP {
-public:
-	//代表点  
-	int representationPoint;
-	// 覆盖的对象集合
-	vector<int> *Cover;
-
-	//RNeighbor* rpNeighbor;
-	vector<RP*> *rpNeighbor;
-	//大小为属性的数目  left代表属性下界   right 代表属性上界
-	//double *left;
-	vector<double> left;
-	vector<double> right;
-	//double *right;
-	//Neis是Xi的覆盖区域
-	RP(int rp, vector<int> **Neis, int attrs)
-	{
-		//left = new double[attrs];
-		//right = new double[attrs];
-		left.resize(attrs);
-		right.resize(attrs);
-		for (int i = 0; i < attrs; i++)
-		{
-			//*(left + i) = MAX;
-			//*(right + i) = MIN;
-			left[i] = MAX;
-			right[i] = MIN;
-		}
-		//设置代表点
-		setRepresentationPoint(rp);
-		//设置覆盖点
-		setCover(Neis);
-
-		//rpNeighbor = new RNeighbor(this);
-		rpNeighbor = new vector<RP*>();
-	}
-
-	~RP()
-	{
-		delete Cover;
-		delete rpNeighbor;
-	}
-	void setRepresentationPoint(int x)
-	{
-		representationPoint = x;
-	}
-
-	void setCover(vector<int> **x)
-	{
-		//Cover->assign((*x)->begin(), (*x)->end());
-		Cover = *x;
-	}
-
-	//Cover 添加数据
-	void CoverPush(int x)
-	{
-		Cover->push_back(x);
-	}
-	//获取覆盖的大小
-	int getCoverSize()
-	{
-		return Cover->size();
-	}
-
-	//获取覆盖的下标对应的值
-	int getCoverVal(int i)
-	{
-		return Cover->at(i);
-	}
-
-	//根据属性下标（第几个下标）获取属性值
-	double getLeft(int i)
-	{
-		//return *(left + i);
-		return left[i];
-	}
-
-	double getRight(int i)
-	{
-		//return *(right + i);
-		return right[i];
-	}
-	//根据属性下标（第几个下标）获取属性值
-	void setLeft(int i, double val)
-	{
-		//*(left + i) = val;
-		left[i] = val;
-	}
-	void setRight(int i, double val)
-	{
-		//*(right + i) = val;
-		right[i] = val;
-	}
-};
 
 //center记录代表点邻居集合   的    类
 class RNeighbor {
@@ -622,8 +638,11 @@ public:
 			set<int> *subGW = new set<int>();
 			subGraph_BFS(visited, notVisited, subG, subGW);
 			//子图的存储
-			subGraphs.push_back(subG);
-			subGraphsWeak.push_back(subGW);
+			if (subG->size() > 1)
+			{
+				subGraphs.push_back(subG);
+				subGraphsWeak.push_back(subGW);
+			}
 		}
 	}
 	/*获取一个强连接子图*/

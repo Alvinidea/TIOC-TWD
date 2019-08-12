@@ -28,8 +28,9 @@ vector<int>* getNeighborByRecord(vector<Neighbor*> *neighbors, int record)
 			flag = 1;
 			return temp->getNei();
 		}
-
 	}
+	if (flag == 0)
+		return NULL;
 }
 
 /*
@@ -69,27 +70,32 @@ Similarity = 【  Cover(i) 交 Cover(j) 】 / min{Cover(i) ，Cover(j)}
 */
 double computeSimilarity(RP* ri, RP* rj)
 {
-	set<int> *ri_cover = new set<int>();
-	set<int> *rj_cover = new set<int>();
+	set<int> ri_cover ;
+	set<int> rj_cover;
 	vector<int>::iterator insert_iterator;
-	set<int> *res = new set<int>();//存储交集结果
+	set<int> res;//存储交集结果
 
 	double min, inter, isize, jsize;
 	double ret;
+	int temp;
 	for (int i = 0; i < ri->getCoverSize(); i++)
 	{
-		ri_cover->insert(ri->getCoverVal(i));
+		temp = ri->getCoverVal(i);
+		ri_cover.insert(temp);
+		res.insert(temp);
 	}
 	for (int j = 0; j < rj->getCoverSize(); j++)
 	{
-		rj_cover->insert(rj->getCoverVal(j));
+		temp = rj->getCoverVal(j);
+		rj_cover.insert(temp);
+		res.insert(temp);
 	}
-	jsize = rj_cover->size();
-	isize = ri_cover->size();
+	jsize = rj_cover.size();
+	isize = ri_cover.size();
 	min = isize < jsize ? isize : jsize;
 	//
 	//std::set_intersection(ri_cover->begin(), ri_cover->end(), ri_cover->begin(), ri_cover->end(), res->begin());
-	inter = res->size();
+	inter = jsize+ isize - res.size();
 	ret = inter / min;
 	return ret;
 }
@@ -274,7 +280,7 @@ void printNei(const vector<Neighbor*> *neis)
 	{
 		Neighbor* nei = (*neis)[i];
 		cout << "中心点：" << nei->center << " ; ";
-		cout << '\t' << "邻居数目：" << nei->count << " ; ";
+		cout << '\t' << "邻居数目：" << nei->count << "\t::  ";
 		vector<int> *Nei = nei->getNei();
 		for (int j = 0; j < Nei->size(); j++)
 		{
@@ -293,7 +299,7 @@ void printR(const vector<RP*> *R, int attrs)
 	for (int i = 0; i < R->size(); i++)
 	{
 		RP* rp = (*R)[i];
-		cout << "代表点：" << rp->representationPoint << endl;
+		cout << i+1 <<":  代表点：" << rp->representationPoint << endl;
 		cout << '\t' << "覆盖域：";
 		for (int j = 0; j < rp->getCoverSize(); j++)
 		{
@@ -363,7 +369,7 @@ void printGR(Graph *graph)
 			cout << graph->getMapping((*(*it))[j])->representationPoint << "  ";
 		}
 
-		cout << '\t' << "第" << itr << "个弱关联子图：" << '\t';
+		cout << "\n\t" << "第" << itr << "个弱关联子图：" << '\t';
 		for (itW2 = (*itW)->begin(); itW2 != (*itW)->end(); itW2++) {
 
 			//根据 存储的矩阵行或列中的位置      映射到    代表点的指针
@@ -467,7 +473,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 	while (distance->getRows() != 0)
 	{
 		//选择第一行（距离矩阵 未删除数据的第一行）
-		int record = distance->getFirstRecord();
+		int record = distance->getFirstRecord(neighbors);
 		if (record == -1)//说明已经删完了
 			break;
 		// 存放邻居集合
@@ -476,7 +482,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 		
 		//生成代表点 设置代表记录  和  覆盖区域   初始化属性值上下界
 		RP *rp = new RP(record, &nei, attrs);
-
+		rp->setLeftAndRight(U,attrs);
 		for (int i = 0; i < rp->getCoverSize(); i++)
 		{
 			int reco = (*(rp->Cover))[i];
@@ -518,7 +524,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 			{
 				//获得代表点之间的距离
 				double distance = getRPDistance(ri, rj, attrs);
-				if (distance <= 5 * threshold)
+				if (distance <= 2 * threshold)
 				{
 					rnei->push_back(rj);
 				}
