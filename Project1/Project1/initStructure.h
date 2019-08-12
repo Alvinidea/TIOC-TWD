@@ -51,13 +51,15 @@ public:
 class Distance {
 public:
 	//距离矩阵
-	double **distance;
+	//double **distance;
+	vector<vector<double>> distance;
 	/*
 	-- 状态数组  用于存放矩阵行的状态
 	-- 因为后面会对使用过的距离矩阵row 进行删除操作，使用state存储删除状态
 	-- 初始化为 0   删除后为 1
 	*/
-	int *state;
+	//int *state;
+	vector<double> state;
 	// 有效记录数目  （未被假删除的记录数目）
 	int rows;
 	// ALL记录数目  
@@ -71,28 +73,25 @@ public:
 	{
 		NUM = rows = N;
 		//为 状态矩阵 开辟空间
-		state = new int(N + 1);
-		distance = new double*[N + 1];
-		for (int i = 0; i < N + 1; i++)
+		//state = new int(N + 1);
+		//distance = new double*[N + 1];
+		distance.resize(NUM);
+		state.resize(NUM);
+		for (int i = 0; i < N ; i++)
 		{
-			*(state + i) = 0;
-			*(distance + i) = new double[N + 1];
-			for (int j = 0; j < N + 1; j++)
+			//*(state + i) = 0;
+			//*(distance + i) = new double[N + 1];
+			distance[i].resize(NUM);
+			for (int j = 0; j < N ; j++)
 			{
-				*(*(distance + i) + j) = 0;
+				distance[i][j] = 0;
+				//*(*(distance + i) + j) = 0;
 			}
 		}
 	}
 
 	~Distance()
-	{
-		for (int i = 0; i < NUM + 1; i++)
-		{
-			delete[] * (distance + i);
-		}
-		delete[] distance;
-		delete[] state;
-	}
+	{	}
 
 	//计算欧里几德距离
 	double getDistance(X *x, X *y, int attrs)
@@ -119,16 +118,16 @@ public:
 	*/
 	void setAllDistance(double *U[], int N, int attrs)
 	{
-		for (int i = 1; i < N + 1; i++)
+		for (int i = 0; i < N ; i++)
 		{
-			for (int j = 1; j < N + 1; j++)
+			for (int j = 0; j < N; j++)
 			{
 				if (i == j)
 					;
 				else
 				{	//计算距离，使用欧几里德距离
-					X *x = new X(*(U + i - 1), attrs);
-					X *y = new X(*(U + j - 1), attrs);
+					X *x = new X(*(U + i ), attrs);
+					X *y = new X(*(U + j ), attrs);
 					setDisVal(i, j, getDistance(x, y, attrs));
 				}
 			}
@@ -138,23 +137,27 @@ public:
 	//设置 i代表行记录号   j代表列记录号  val是要设置的值
 	void setDisVal(int i, int j, double val)
 	{
-		*(*(distance + i) + j) = val;
+		//*(*(distance + i) + j) = val;
+		distance[i][j] = val;
 	}
 	//获取 i代表行记录号码   j代表列记录号
 	double getDisVal(int i, int j)
 	{
-		return *(*(distance + i) + j);
+		//return *(*(distance + i) + j);
+		return distance[i][j];
 	}
 
 	//设置状态 i代表行记录号  
 	void setState(int i)
 	{
-		*(state + i) = 1;
+		//*(state + i) = 1;
+		state[i] = 1;
 	}
 	//获取状态 i代表行记录号  
 	double getState(int i)
 	{
-		return *(state + i);
+		//return *(state + i);
+		return state[i];
 	}
 	//获取有效的记录数目
 	int getRows()
@@ -181,9 +184,10 @@ public:
 	int getFirstRecord()
 	{
 		//返回遇到的第一个状态为 未删除 的
-		for (int i = 1; i < NUM + 1; i++)
+		for (int i = 0; i < NUM ; i++)
 		{
-			if (*(state + i) == 0)
+			//if (*(state + i) == 0)
+			if (state[i] == 0)
 			{
 				deleteRows(i);
 				return i;
@@ -215,10 +219,23 @@ public:
 		center = cente;
 		Nei = new vector<int>();
 	}
-	void addNeighbor(int newNeighbor)
+	~Neighbor()
+	{
+		delete Nei;
+	}
+	void addNei(int newNeighbor)
 	{
 		Nei->push_back(newNeighbor);
 		//count++;
+	}
+	int getNeiSize()
+	{
+		return Nei->size();
+	}
+
+	vector<int>* getNei()
+	{
+		return Nei;
 	}
 };
 
@@ -240,18 +257,23 @@ public:
 	//RNeighbor* rpNeighbor;
 	vector<RP*> *rpNeighbor;
 	//大小为属性的数目  left代表属性下界   right 代表属性上界
-	double *left;
-
-	double *right;
+	//double *left;
+	vector<double> left;
+	vector<double> right;
+	//double *right;
 	//Neis是Xi的覆盖区域
 	RP(int rp, vector<int> **Neis, int attrs)
 	{
-		left = new double[attrs];
-		right = new double[attrs];
+		//left = new double[attrs];
+		//right = new double[attrs];
+		left.resize(attrs);
+		right.resize(attrs);
 		for (int i = 0; i < attrs; i++)
 		{
-			*(left + i) = MAX;
-			*(right + i) = MIN;
+			//*(left + i) = MAX;
+			//*(right + i) = MIN;
+			left[i] = MAX;
+			right[i] = MIN;
 		}
 		//设置代表点
 		setRepresentationPoint(rp);
@@ -264,8 +286,7 @@ public:
 
 	~RP()
 	{
-		delete[] left;
-		delete[] right;
+		delete Cover;
 		delete rpNeighbor;
 	}
 	void setRepresentationPoint(int x)
@@ -275,16 +296,22 @@ public:
 
 	void setCover(vector<int> **x)
 	{
+		//Cover->assign((*x)->begin(), (*x)->end());
 		Cover = *x;
 	}
 
+	//Cover 添加数据
+	void CoverPush(int x)
+	{
+		Cover->push_back(x);
+	}
 	//获取覆盖的大小
 	int getCoverSize()
 	{
 		return Cover->size();
 	}
 
-	//获取覆盖的大小
+	//获取覆盖的下标对应的值
 	int getCoverVal(int i)
 	{
 		return Cover->at(i);
@@ -293,21 +320,25 @@ public:
 	//根据属性下标（第几个下标）获取属性值
 	double getLeft(int i)
 	{
-		return *(left + i);
+		//return *(left + i);
+		return left[i];
 	}
 
 	double getRight(int i)
 	{
-		return *(right + i);
+		//return *(right + i);
+		return right[i];
 	}
 	//根据属性下标（第几个下标）获取属性值
 	void setLeft(int i, double val)
 	{
-		*(left + i) = val;
+		//*(left + i) = val;
+		left[i] = val;
 	}
 	void setRight(int i, double val)
 	{
-		*(right + i) = val;
+		//*(right + i) = val;
+		right[i] = val;
 	}
 };
 

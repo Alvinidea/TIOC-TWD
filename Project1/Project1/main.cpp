@@ -21,7 +21,7 @@ output:
 */
 void getData(double *arr[], int &i)
 {
-	std::ifstream in("C:\\Users\\ALVIN\\Desktop\\DataSet\\Banknote\\test.txt", ios::in);
+	std::ifstream in("DataSet\\Banknote\\test.txt", ios::in);
 
 	double floa;
 	char dou;

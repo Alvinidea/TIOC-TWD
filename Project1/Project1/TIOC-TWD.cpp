@@ -24,8 +24,9 @@ vector<int>* getNeighborByRecord(vector<Neighbor*> *neighbors, int record)
 	{
 		if ((*neighbors)[i]->center == record)
 		{
+			Neighbor* temp = (*neighbors)[i];
 			flag = 1;
-			return (*neighbors)[i]->Nei;
+			return temp->getNei();
 		}
 
 	}
@@ -274,7 +275,7 @@ void printNei(const vector<Neighbor*> *neis)
 		Neighbor* nei = (*neis)[i];
 		cout << "中心点：" << nei->center << " ; ";
 		cout << '\t' << "邻居数目：" << nei->count << " ; ";
-		vector<int> *Nei = nei->Nei;
+		vector<int> *Nei = nei->getNei();
 		for (int j = 0; j < Nei->size(); j++)
 		{
 			cout << (*Nei)[j] << " , ";
@@ -294,7 +295,7 @@ void printR(const vector<RP*> *R, int attrs)
 		RP* rp = (*R)[i];
 		cout << "代表点：" << rp->representationPoint << endl;
 		cout << '\t' << "覆盖域：";
-		for (int j = 0; j < rp->Cover->size(); j++)
+		for (int j = 0; j < rp->getCoverSize(); j++)
 		{
 			cout << (*(rp->Cover))[j] << " , ";
 		}
@@ -318,7 +319,7 @@ void printState(Distance *distance)
 	cout << "==========================================" << endl;
 	cout << "打印记录状态矩阵:" << endl;
 	cout << "==========================================" << endl;
-	for (int i = 1; i < distance->NUM + 1; i++)
+	for (int i = 0; i < distance->NUM ; i++)
 		cout << distance->state[i] << "  ";
 	cout << endl;
 }
@@ -426,14 +427,14 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 	----------------------------------------------------------------------------*/
 	distance->setAllDistance(U, N, attrs);
 	/*----------------------------------------------------------------------------
-	--计算Xi的邻居
-	--所有的记录的邻居都要计算
+	-- 计算Xi的邻居
+	-- 所有的记录的邻居都要计算
 	----------------------------------------------------------------------------*/
-	for (int i = 1; i < N + 1; i++)
+	for (int i = 0; i < N ; i++)
 	{
 
 		Neighbor *nei = new Neighbor(i);
-		for (int j = 1; j < N + 1; j++)
+		for (int j = 0; j < N ; j++)
 		{
 			if (i == j)			//邻居不需要计算自身
 				;
@@ -441,12 +442,12 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 			{//判断两个对象的距离是否 <= threshold
 				if (distance->getDisVal(i, j) <= threshold)
 				{//小于等于则加入到该对象的邻居集中
-					nei->addNeighbor(j);
+					nei->addNei(j);
 				}
 			}
 		}
 		//存储 Xi 的邻居数目
-		nei->count = nei->Nei->size();
+		nei->count = nei->getNeiSize();
 		// 存入所有点的邻居集
 		neighbors->push_back(nei);
 	}
@@ -476,7 +477,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 		//生成代表点 设置代表记录  和  覆盖区域   初始化属性值上下界
 		RP *rp = new RP(record, &nei, attrs);
 
-		for (int i = 0; i < rp->Cover->size(); i++)
+		for (int i = 0; i < rp->getCoverSize(); i++)
 		{
 			int reco = (*(rp->Cover))[i];
 			//设置代表点的 属性上|下界
@@ -484,7 +485,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 			{
 				//Cover中保存的是对象号  +1第一行存的是记录号
 				// U 是从 0 开始计算   而对象号从 1 开始算 ，所以*(U + reco -1)
-				double attrVal = *(*(U + reco - 1) + 1 + attr);
+				double attrVal = *(*(U + reco) + 1 + attr);
 				if (rp->getLeft(attr) > attrVal)
 					rp->setLeft(attr, attrVal);
 				if (rp->getRight(attr) < attrVal)
@@ -507,7 +508,7 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 		RP* ri = (*R)[i];
 		double similarityRiRj;//存储相似度
 		//RNeighbor* rnei = ri->rpNeighbor;
-		vector<RP*> *rnei = ri->rpNeighbor;
+		vector<RP*> *rnei = (ri->rpNeighbor);
 		for (int j = 0; j < R->size(); j++)
 		{
 			RP* rj = R->at(j);
@@ -882,7 +883,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 		FindingNeighbors(root, r_wait, threshold, attrs, R_neighbor, Path);
 
 		vector<int>::iterator it_x;
-		vector<int>* cover = r_wait->Cover;
+		vector<int>* cover = (r_wait->Cover);
 		//存储没有映射到R_neighbor的记录|对象
 		vector<double> *noMapping = new vector<double>();
 		//（2）=========================================================================
@@ -908,7 +909,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 				double dist = getDistanceRX(x, rp, U2, attrs);
 				if (dist <= threshold)//判断条件
 				{
-					rp->Cover->push_back(x);
+					rp->CoverPush(x);
 					flag = false;
 				}
 			}
@@ -928,7 +929,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 			for (it_rp = R_neighbor->begin(); it_rp != R_neighbor->end(); it_rp++)
 			{
 				RP* rp = *it_rp;
-				vector<int>* cover2 = rp->Cover;
+				vector<int>* cover2 = (rp->Cover);
 				// 遍历邻居代表点中的记录(对象)
 				for (it_x = cover2->begin(); it_x != cover2->end(); it_x++)
 				{
@@ -939,7 +940,7 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 					{
 						//Cover(r_wait) = Cover(r_wait) U x
 						//邻居点对象放入到 r_wait 代表点的覆盖域
-						r_wait->Cover->push_back(x);
+						r_wait->CoverPush(x);
 					}
 				}
 			}
