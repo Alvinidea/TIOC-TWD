@@ -11,6 +11,7 @@ void SOC_TWD(vector<vector<double>> *U, int N, int attrs, double alpha, double b
 	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2);
 
 **创建查找树：**
+
 void CST(vector<RP*> *R, int attrs, Node *Root, double threshold = 0.9);
 
 **找到邻接点：**
