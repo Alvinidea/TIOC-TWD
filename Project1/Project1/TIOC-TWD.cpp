@@ -129,10 +129,10 @@ vector<RP*>::iterator Partition(vector<RP*>*, vector<RP*>::iterator low,
 	vector<RP*>::value_type pivokey = *low;
 	while (low < high)
 	{
-		while (low < high && cmpRP_Big(pivokey, *high, layer)) high--; // 若此处为 *high >= pivokey; 则对于5 8 5，进行快速排序仍然为 5 8 5， 不能将
+		while (low < high && cmpRP_Small(pivokey, *high, layer)) high--; // 若此处为 *high >= pivokey; 则对于5 8 5，进行快速排序仍然为 5 8 5， 不能将
 		// 序列变为 5 5 8. 且最后high和low均为第一个元素，故QSort中iter-1会出现越界错误;
 		*low = *high;
-		while (low < high && cmpRP_Small(pivokey, *low, layer)) low++;
+		while (low < high && cmpRP_Big(pivokey, *low, layer)) low++;
 		*high = *low;
 		/*
 		while (low < high && *high > pivokey) high--; // 若此处为 *high >= pivokey; 则对于5 8 5，进行快速排序仍然为 5 8 5， 不能将
@@ -150,7 +150,9 @@ void QSort(vector<RP*>* ivec, vector<RP*>::iterator low, vector<RP*>::iterator h
 	if (low < high)
 	{
 		vector<RP*>::iterator iter = Partition(ivec, low, high, layer);
-		QSort(ivec, low, iter - 1, layer);
+		if(low != iter)
+			QSort(ivec, low, iter - 1, layer);
+		if(high != iter)
 		QSort(ivec, iter + 1, high, layer);
 	}
 }
@@ -266,11 +268,36 @@ double getDistanceRX(int rd, RP* rp, double **U2, int attrs)
 	ret = sqrt(sum);
 	return ret;
 }
+double getDistanceRX(int rd, RP* rp, vector<vector<double>> *U2, int attrs)
+{
+	double ret, sum, temp;
+	int j = rp->representationPoint;
+	X x = X((*U2)[rd - 1], attrs);
+	X y = X((*U2)[j - 1], attrs);
+	ret = sum = temp = 0;
+	for (int i = 0; i < attrs; i++)
+	{
+		temp = x.getVal(i) - y.getVal(i);
+		temp = pow(temp, 2);
+		sum += temp;
+	}
+	ret = sqrt(sum);
+	return ret;
+}
 
 //####################################################################################
 //  打印方法（用于数据显示）
 //####################################################################################
 //打印邻居集合
+void printU(vector<vector<double>> *U)
+{
+	for (int i = 0; i < U->size(); i++)
+	{
+		for (int j = 0; j < 6; j++)
+			cout << (*U)[i][j] << '\t';
+		cout << endl;
+	}
+}
 void printNei(const vector<Neighbor*> *neis)
 {
 	cout << "==========================================" << endl;
@@ -400,6 +427,46 @@ void printCluster(vector<Cluster*> *clusters)
 	}
 }
 
+void printTree(Node *root)
+{
+	cout << "==========================================" << endl;
+	cout << "打印查找树" << endl;
+	cout << "==========================================" << endl;
+	int pnode = 0;
+	int level, front, rear,last;
+	level = 0;
+	front = rear =-1;
+	last = 0;
+	vector<Node*>::iterator it;
+	queue<Node*> que;
+	que.push(root);
+	rear++;
+	while (que.size() != 0)
+	{
+		Node* node = que.front();
+
+		que.pop();
+		front++;
+		cout << pnode << ",";
+		pnode++;
+		if (node->sons_Node != NULL && node->sons_Node->size() != 0)
+		{
+			for (it = node->sons_Node->begin(); it != node->sons_Node->end(); it++)
+			{
+				que.push(*it); 
+				rear++;
+			}
+		}
+		if (front == last)
+		{
+			level++;
+			last = rear;
+			cout << endl << endl;
+		}
+
+	}
+}
+
 
 //####################################################################################
 //  四大算法
@@ -413,13 +480,14 @@ void printCluster(vector<Cluster*> *clusters)
 	beta
 	threshold 阈值
 */
-void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double threshold)
+void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double threshold,
+	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2)
 {
 	//----------------------------------------------------------------------------
 	//--初始化
 	//----------------------------------------------------------------------------
 	// R 存放代表点的容器
-	vector<RP*> *R = new vector<RP*>();
+	//vector<RP*> *R = new vector<RP*>();
 	// neighbors 存放各个记录的所有邻居的容器
 	vector<Neighbor*> *neighbors = new vector<Neighbor*>();
 	// distance 存放两个记录之间距离的矩阵
@@ -580,8 +648,195 @@ void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double th
 		clusters->push_back(Cx);
 	}
 	printCluster(clusters);
+
+
+	*Graph2 = G;
+	*clusters2 = clusters;
 }
 
+/*
+算法1：
+	U 记录矩阵
+	N 记录数目
+	attrs 属性数目
+	alpha
+	beta
+	threshold 阈值
+*/
+void SOC_TWD(vector<vector<double>> *U, int N, int attrs, double alpha, double beta, double threshold,
+	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2)
+{
+	//----------------------------------------------------------------------------
+	//--初始化
+	//----------------------------------------------------------------------------
+	// R 存放代表点的容器
+	//vector<RP*> *R = new vector<RP*>();
+	// neighbors 存放各个记录的所有邻居的容器
+	vector<Neighbor*> *neighbors = new vector<Neighbor*>();
+	// distance 存放两个记录之间距离的矩阵
+	Distance *distance = new Distance(N);
+
+	//vector<RNeighbor*> rneighbors;
+	vector<vector<RP*>*> rneighbors;
+
+	/*----------------------------------------------------------------------------
+	--计算距离矩阵 计算每个对象（记录）之间的距离
+	----------------------------------------------------------------------------*/
+	distance->setAllDistance(U, N, attrs);
+	/*----------------------------------------------------------------------------
+	-- 计算Xi的邻居
+	-- 所有的记录的邻居都要计算
+	----------------------------------------------------------------------------*/
+	for (int i = 0; i < N; i++)
+	{
+
+		Neighbor *nei = new Neighbor(i);
+		for (int j = 0; j < N; j++)
+		{
+			if (i == j)			//邻居不需要计算自身
+				;
+			else
+			{//判断两个对象的距离是否 <= threshold
+				if (distance->getDisVal(i, j) <= threshold)
+				{//小于等于则加入到该对象的邻居集中
+					nei->addNei(j);
+				}
+			}
+		}
+		//存储 Xi 的邻居数目
+		nei->count = nei->getNeiSize();
+		// 存入所有点的邻居集
+		neighbors->push_back(nei);
+	}
+	/*----------------------------------------------------------------------------
+	-- 对neighbors排序
+	-- 按每个Xi（对象|记录）的邻居数目降序排序
+	----------------------------------------------------------------------------*/
+
+	printNei(neighbors);
+	std::sort(neighbors->begin(), neighbors->end(), cmpNeighbor);
+	printNei(neighbors);
+	/*----------------------------------------------------------------------------
+	-- 创建 R 代表点集合,并将所有代表点加入进去
+	-- RP 包括 代表点   覆盖区域   属性上 和 下界
+	----------------------------------------------------------------------------*/
+	//判断 距离矩阵 中是否还存在Row（以下while循环中会有假删除操作）
+	while (distance->getRows() != 0)
+	{
+		//选择第一行（距离矩阵 未删除数据的第一行）
+		int record = distance->getFirstRecord(neighbors);
+		if (record == -1)//说明已经删完了
+			break;
+		// 存放邻居集合
+		vector<int> *nei = getNeighborByRecord(neighbors, record);
+		// 获取nei  根据记录号 在 存放所有记录邻居集合 中获取对应邻居集合
+
+		//生成代表点 设置代表记录  和  覆盖区域   初始化属性值上下界
+		RP *rp = new RP(record, &nei, attrs);
+		rp->setLeftAndRight(U, attrs);
+		for (int i = 0; i < rp->getCoverSize(); i++)
+		{
+			int reco = (*(rp->Cover))[i];
+			//设置代表点的 属性上|下界
+			for (int attr = 0; attr < attrs; attr++)
+			{
+				//Cover中保存的是对象号  +1第一行存的是记录号
+				// U 是从 0 开始计算   而对象号从 1 开始算 ，所以*(U + reco -1)
+				//double attrVal = *(*(U + reco) + 1 + attr);
+				double attrVal = (*U)[reco][1 + attr];
+				if (rp->getLeft(attr) > attrVal)
+					rp->setLeft(attr, attrVal);
+				if (rp->getRight(attr) < attrVal)
+					rp->setRight(attr, attrVal);;
+			}
+			distance->deleteRows(reco);
+		}
+		R->push_back(rp);
+	}
+
+	printState(distance);
+	printR(R, attrs);
+	/*----------------------------------------------------------------------------
+	-- 创建G图   并且   计算相似度
+	-- 使用代表点 当 做图中的结点
+	//--------------------------------------------------------------------------*/
+	Graph *G = new Graph(R);
+	for (int i = 0; i < R->size(); i++)
+	{
+		RP* ri = (*R)[i];
+		double similarityRiRj;//存储相似度
+		//RNeighbor* rnei = ri->rpNeighbor;
+		vector<RP*> *rnei = (ri->rpNeighbor);
+		for (int j = 0; j < R->size(); j++)
+		{
+			RP* rj = R->at(j);
+			if (i == j)
+				;
+			else
+			{
+				//获得代表点之间的距离
+				double distance = getRPDistance(ri, rj, attrs);
+				if (distance <= 2 * threshold)
+				{
+					rnei->push_back(rj);
+				}
+				//计算出代表点之间的相似度
+				similarityRiRj = computeSimilarity(ri, rj);
+				if (similarityRiRj >= alpha)
+				{
+					//strong link
+					G->addStrongLink(ri, rj);
+				}
+				if (similarityRiRj < alpha && similarityRiRj >= beta)
+				{
+					//weak link
+					G->addWeakLink(ri, rj);
+				}
+			}
+		}
+		rneighbors.push_back(rnei);
+	}
+	printG(G);
+	//----------------------------------------------------------------------------
+	// 获取强连通子图
+	// 并且生成子图
+	//----------------------------------------------------------------------------
+	G->BFS();
+	printGR(G);
+	//----------------------------------------------------------------------------
+	//----------------------生成聚类集合------------------------------------------
+	//----------------------------------------------------------------------------
+	vector<Cluster*> *clusters = new vector<Cluster*>();
+	list<vector<int>*>::iterator it; //声明一个迭代器 用于迭代Strong link的
+	list<set<int>*>::iterator itW; //声明一个迭代器 用于迭代weak link的
+	int newN = 1;
+	for (it = G->subGraphs.begin(), itW = G->subGraphsWeak.begin();
+		it != G->subGraphs.end();
+		it++, itW++) {
+		Cluster *Cx = new Cluster(newN);
+
+		for (int i = 0; i < (*it)->size(); i++)
+		{
+			//根据 存储的矩阵行或列中的位置      映射到    代表点的指针
+			RP* rp = G->getMapping((*(*it))[i]);//(*(*it))[i]    (*it)->at(i)
+			Cx->addCoverToPOS(rp);
+		}
+		set<int>::iterator itW2;
+		for (itW2 = (*itW)->begin(); itW2 != (*itW)->end(); itW2++) {
+
+			//根据 存储的矩阵行或列中的位置      映射到    代表点的指针
+			RP* rp = G->getMapping(*itW2);
+			Cx->addCoverToBND(rp);
+		}
+		newN++;
+		clusters->push_back(Cx);
+	}
+	printCluster(clusters);
+
+
+	*Graph2 = G;
+	*clusters2 = clusters;
+}
 
 /*
 算法2：
@@ -594,7 +849,7 @@ input ：
 output：
 	root：root of researching tree
 */
-void CST(vector<RP*> *R, int *A,int attrs, double threshold)
+void CST(vector<RP*> *R,int attrs,Node *Root, double threshold)
 {
 	/*
 		vector<set<Node*>>					存放所有层的 结点集合
@@ -604,7 +859,7 @@ void CST(vector<RP*> *R, int *A,int attrs, double threshold)
 	vector<set<Node*>> *LayerNodes = new vector<set<Node*>>();
 	int layer = 0;
 	// 根结点的父结点为NULL
-	Node *Root = new Node(layer,NULL);
+	//Node *Root = new Node(layer,NULL);
 	Root->R = R;
 	double lastLayer, curLayer;
 
@@ -620,6 +875,11 @@ void CST(vector<RP*> *R, int *A,int attrs, double threshold)
 	while (lastLayer/curLayer < threshold || layer < attrs)
 	{
 		//=========================================================================
+		// 创建一个新层
+		//=========================================================================
+		set<Node*> Nodes;
+		LayerNodes->push_back(Nodes);
+		//=========================================================================
 		// 遍历第 i 层中的所有结点(一个结点 中 包含多个代表点)
 		//=========================================================================
 		set<Node*>::iterator it_node_ij;
@@ -633,12 +893,13 @@ void CST(vector<RP*> *R, int *A,int attrs, double threshold)
 			//	R中的代表点  按照下界值的增序排序   所以后面的结点下界  >  前面结点下界
 			//	cmpRP函数  根据第 layer 层（属性）进行排序
 			//=========================================================================
-			vector<RP*> *R = (*it_node_ij)->R;
+			vector<RP*> *node_R = (*it_node_ij)->R;
 			// 对上界还是下界排序 ？ 第几个属性 ？ 
 			// 下界left 第layer个属性
-			vector<RP*>::iterator low = R->begin();
-			vector<RP*>::iterator high = R -> end();
-			QSort(R, low, high, layer);
+			vector<RP*>::iterator low = node_R->begin();
+			vector<RP*>::iterator high = node_R-> end();
+			high = high - 1;
+			QSort(node_R, low, high, layer);
 
 			//std::sort(R->begin(),R->end(), cmpRP);
 			
@@ -646,19 +907,20 @@ void CST(vector<RP*> *R, int *A,int attrs, double threshold)
 			//	创建第 i+1 层新结点（设置它的层数 和 父亲结点）
 			//	将上层父亲节点 经过排序后的代表点集合的 第一个 代表点    加入到该节点中
 			//=========================================================================
-			Node *node_ij_1 = new Node(layer, tempFather);
+			Node *node_ij_1 = new Node(layer + 1, tempFather);
 			tempFather->add_SonNode( node_ij_1 );
-			node_ij_1->add_RP( *(R->begin()) );
+			node_ij_1->add_RP( *(node_R->begin()) );
 			//=========================================================================
 			//	通过代表点的相似度对第 i+1 层结点进行划分
 			//=========================================================================
 			vector<RP*>::iterator it_rp;
-			for (it_rp = R->begin() + 1; it_rp != R->end(); it_rp++)
+			bool similarity = true;
+			for (it_rp = node_R->begin() + 1; it_rp != node_R->end(); it_rp++)
 			{
 				//=========================================================================
 				// 计算相似性   使用Definition 5
 				//=========================================================================
-				bool similarity = isSimilarity(node_ij_1, *it_rp,layer);
+				similarity = isSimilarity(node_ij_1, *it_rp,layer);
 				//判断相似性
 				if (similarity)
 				{	//代表点和结点相似 则将代表点加入到结点包含的集合之中
@@ -670,26 +932,40 @@ void CST(vector<RP*> *R, int *A,int attrs, double threshold)
 					// 计算该结点（node_ij_1）的 的第layer属性的low 和 high值
 					// 并插入到树的第 layer 层
 					//=========================================================================
-					node_ij_1->computeLowAndHigh(layer);
-					// 插入到查找树的第layer层
-					((*LayerNodes)[layer]).insert(node_ij_1);
+					node_ij_1->computeLowAndHigh( layer );
+					// 插入到查找树的第 layer+1 层
+					((*LayerNodes)[layer + 1]).insert(node_ij_1);
 					//=========================================================================
 					// 创建一个新的结点 设置它的层数 和 父亲结点
 					// 并设置其包含的初始代表点
 					//=========================================================================
-					Node *node_ij_2 = new Node(layer, tempFather);
+					Node *node_ij_2 = new Node(layer + 1, tempFather);
 					//将上层父亲节点 经过排序后的代表点集合的第一个代表点    加入到该节点中
 					node_ij_2->add_RP(*it_rp);
 					//父亲结点tempFather添加 node_ij_2为孩子结点
 					tempFather->add_SonNode(node_ij_2);
 				}
 			}
+			if (similarity)
+			{
+				//=========================================================================
+					// 计算该结点（node_ij_1）的 的第layer属性的low 和 high值
+					// 并插入到树的第 layer 层
+					//=========================================================================
+				node_ij_1->computeLowAndHigh(layer);
+				// 插入到查找树的第layer层
+				((*LayerNodes)[layer + 1]).insert(node_ij_1);
+			}
+			else 
+			{
+				vector<Node*>::iterator finalson = tempFather->sons_Node->end() - 1;
+				(*finalson)->computeLowAndHigh(layer);
+				// 插入到查找树的第layer层
+				((*LayerNodes)[ layer + 1 ]).insert(*finalson);
+				//node_ij_2->computeLowAndHigh(layer);
+			}
 		}
-		//=========================================================================
-		// 创建一个新层
-		//=========================================================================
-		set<Node*> Nodes;
-		LayerNodes->push_back(Nodes);
+
 		
 		layer++;
 		// 计算循环条件
@@ -872,7 +1148,7 @@ input:
 Output:
 	clusters: 聚类集合
 */
-void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta, double threshold,
+void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double threshold,
 	int attrs, Node* root, double **U2, Graph *G, vector<Cluster*> *clusters)
 {
 	vector<RP*>::iterator R_itor;
@@ -1042,4 +1318,187 @@ void UpdatingClustering(vector<RP*> *R, Graph *graph, double alpha, double beta,
 	}
 }
 
+/*
+更新聚类
+	算法3在算法4中被循环调用
+input:
+	R: 代表点集合（来自算法1）
+	G: 代表点的连接图（来自算法1）
+	U2: 新加入记录矩阵
+	clusters: 聚类集合
+	attrs:属性数目
+	alpha：
+	beta:
+	threshold: 阈值，用于判断距离
+Output:
+	clusters: 聚类集合
+*/
+void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double threshold,
+	int attrs, Node* root, vector<vector<double>> *U2, Graph *G, vector<Cluster*> *clusters)
+{
+	vector<RP*>::iterator R_itor;
+	vector<Node*>::iterator it_node;
+	for (R_itor = R->begin(); R_itor != R->end(); R_itor++)
+	{
+		RP* r_wait = *R_itor;
+		vector<RP*>* R_neighbor = new vector<RP*>();
+		vector<Node*> *Path = new vector<Node*>();
 
+		//（1）=========================================================================
+		//	获取r_wait的邻居结点集合（调用算法三）
+		//=========================================================================
+		FindingNeighbors(root, r_wait, threshold, attrs, R_neighbor, Path);
+
+		vector<int>::iterator it_x;
+		vector<int>* cover = (r_wait->Cover);
+		//存储没有映射到R_neighbor的记录|对象
+		vector<double> *noMapping = new vector<double>();
+		//（2）=========================================================================
+		// 用于判断 在r_wait中的记录Or对象 是否映射到 R_neighbor中的邻居代表点
+		// 如果存在映射		则将r_wait中包含的对象存放到对应映射代表点 
+		// 不存在映射		
+		//=========================================================================
+		bool flag;
+
+		//（3）=========================================================================
+		// 判断r_wait代表点中记录x 和 r_wait的邻居代表点的距离dist
+		// dist  <  阈值： 则将记录x 放入到 对应的r_wait的邻居代表点 的覆盖域Cover中
+		//			否则： 将记录x放入到存放无映射对象的集合noMapping中
+		//=========================================================================
+		vector<RP*>::iterator it_rp;
+		for (it_x = cover->begin(); it_x != cover->end(); it_x++)
+		{
+			double x = *it_x;
+			flag = true;
+			for (it_rp = R_neighbor->begin(); it_rp != R_neighbor->end(); it_rp++)
+			{
+				RP* rp = *it_rp;
+				double dist = getDistanceRX(x, rp, U2, attrs);
+				if (dist <= threshold)//判断条件
+				{
+					rp->CoverPush(x);
+					flag = false;
+				}
+			}
+			if (flag)
+			{
+				noMapping->push_back(x);
+			}
+		}
+		//（4）=========================================================================
+		// 三种情况的最后一种情况（r_wait代表点 和其他代表点的没有重合时候）
+		// 判断 r_wait 和其邻居代表点中对象的距离 是否小于阈值
+		// 
+		//=========================================================================
+		if (noMapping->size() == 0)
+		{
+			//遍历 r_wait 的邻居代表点
+			for (it_rp = R_neighbor->begin(); it_rp != R_neighbor->end(); it_rp++)
+			{
+				RP* rp = *it_rp;
+				vector<int>* cover2 = (rp->Cover);
+				// 遍历邻居代表点中的记录(对象)
+				for (it_x = cover2->begin(); it_x != cover2->end(); it_x++)
+				{
+					double x = *it_x;
+					//计算 r_wait  与 邻居点对象之间的距离
+					double dist = getDistanceRX(x, r_wait, U2, attrs);
+					if (dist <= threshold)
+					{
+						//Cover(r_wait) = Cover(r_wait) U x
+						//邻居点对象放入到 r_wait 代表点的覆盖域
+						r_wait->CoverPush(x);
+					}
+				}
+			}
+			//将r_wait代表点 放入到 R_neighbor
+			R_neighbor->push_back(r_wait);
+		}
+		//（5）=========================================================================
+		//三种情况的前两种情况（r_wait代表点 和附近其他代表点的部分Or完全重合时候）
+		//从（算法3产生）Path路径中删除 结点中的 r_wait 代表点
+		//=========================================================================
+		else
+		{
+			vector<RP*>::iterator it_rp2;
+			//遍历Path路径中的查询树结点
+			for (it_node = Path->begin(); it_node != Path->end(); it_node++)
+			{
+				Node* node = *it_node;
+				//取出查询树结点的代表点集合
+				vector<RP*> *R = node->R;
+				for (it_rp2 = R->begin(); it_rp2 != R->end(); it_rp2++)
+				{
+					//删除路径中查询树结点之中的 r_wait 代表点
+					if (*it_rp2 == r_wait)
+					{
+						R->erase(it_rp2);
+						break;
+					}
+				}
+			}
+		}
+
+		//（6）=========================================================================
+		// 更新子图 ？？？？？？？？？？？？？？？？
+		// 更新r_wait的邻居代表点 与其周围代表点的连接
+		// ---------------------------------------------
+		// 疑问   ？？？  
+		// r_wait代表点 放入到 R_neighbor后 ===》代表着有新的代表点生成 （4）
+		// 那么要在 G 中增加r_wait 代表点的行和列
+		//=========================================================================
+		double similarityRiRj;
+		//遍历 r_wait 的邻居代表点  更新  
+		for (it_rp = R_neighbor->begin(); it_rp != R_neighbor->end(); it_rp++)
+		{
+			//获取 r_wait的邻居代表点 的邻居集合neighbor
+			//vector<RP*> *neighbor = &((*it_rp)->rpNeighbor->Nei);
+			vector<RP*> *neighbor = ((*it_rp)->rpNeighbor);
+			vector<RP*>::iterator it_rp_n;
+			for (it_rp_n = neighbor->begin(); it_rp_n != neighbor->end(); it_rp_n++)
+			{
+				RP* ri = *it_rp;
+				RP* rj = *it_rp_n;
+				//获取两个代表点的相似度
+				similarityRiRj = computeSimilarity(ri, rj);
+				if (similarityRiRj >= alpha)
+				{
+					//strong link
+					G->addStrongLink(ri, rj);
+				}
+				if (similarityRiRj < alpha && similarityRiRj >= beta)
+				{
+					//weak link
+					G->addWeakLink(ri, rj);
+				}
+			}
+		}
+	}
+	//（7）=========================================================================
+	// 获取最终的聚类结果
+	//=========================================================================
+	int newN = 1;
+	list<vector<int>*>::iterator it; //声明一个迭代器 用于迭代Strong link的
+	list<set<int>*>::iterator itW; //声明一个迭代器 用于迭代weak link的
+	for (it = G->subGraphs.begin(), itW = G->subGraphsWeak.begin();
+		it != G->subGraphs.end();
+		it++, itW++) {
+		Cluster *Cx = new Cluster(newN);
+
+		for (int i = 0; i < (*it)->size(); i++)
+		{
+			//根据 存储的矩阵行或列中的位置      映射到    代表点的指针
+			RP* rp = G->getMapping((*(*it))[i]);//(*(*it))[i]    (*it)->at(i)
+			Cx->addCoverToPOS(rp);
+		}
+		set<int>::iterator itW2;
+		for (itW2 = (*itW)->begin(); itW2 != (*itW)->end(); itW2++) {
+
+			//根据 存储的矩阵行或列中的位置      映射到    代表点的指针
+			RP* rp = G->getMapping(*itW2);
+			Cx->addCoverToBND(rp);
+		}
+		newN++;
+		clusters->push_back(Cx);
+	}
+}

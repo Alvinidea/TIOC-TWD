@@ -20,12 +20,23 @@ using namespace std;
 */
 class X {
 	double no;
-	double *val;
+	//double *val;
+	vector<double> val;
 public:
 	//构造函数
 	X(double *v, int attrs)
 	{
-		val = new double[attrs];
+		//val = new double[attrs];
+		val.resize(attrs);
+		no = v[0];
+		for (int i = 0; i < attrs; i++)
+			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][ 1 到 attrs-1]存的才是属性值 
+			val[i] = v[i + 1];
+	}
+	X(vector<double> &v, int attrs)
+	{
+		//val = new double[attrs];
+		val.resize(attrs);
 		no = v[0];
 		for (int i = 0; i < attrs; i++)
 			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][ 1 到 attrs-1]存的才是属性值 
@@ -38,7 +49,7 @@ public:
 			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][ 1 到 attrs-1]存的才是属性值 
 			cout<< "   "<< val[i];
 		cout << endl;
-		delete[] val;
+		//delete[] val;
 	}
 	//获取属性值
 	double getVal(int i)
@@ -150,7 +161,17 @@ public:
 			left[i] = temp;
 		}
 	}
-
+	void setLeftAndRight(vector<vector<double>> *U, int attrs)
+	{
+		double temp = 0;
+		for (int i = 0; i < attrs; i++)
+		{
+			temp = (*U)[representationPoint][i+1];
+			//temp = *(*(U + representationPoint) + i + 1);
+			right[i] = temp;
+			left[i] = temp;
+		}
+	}
 	void setRepresentationPoint(int x)
 	{
 		representationPoint = x;
@@ -290,7 +311,23 @@ public:
 			}
 		}
 	}
-
+	void setAllDistance(vector<vector<double>> *U, int N, int attrs)
+	{
+		for (int i = 0; i < N; i++)
+		{
+			for (int j = 0; j < N; j++)
+			{
+				if (i == j)
+					;
+				else
+				{	//计算距离，使用欧几里德距离
+					X *x = new X((*U)[i], attrs);
+					X *y = new X((*U)[j], attrs);
+					setDisVal(i, j, getDistance(x, y, attrs));
+				}
+			}
+		}
+	}
 	//设置 i代表行记录号   j代表列记录号  val是要设置的值
 	void setDisVal(int i, int j, double val)
 	{
@@ -772,25 +809,33 @@ alpha
 beta
 threshold 阈值
 */
-void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double threshold);
+void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double threshold,
+	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2);
+void SOC_TWD(vector<vector<double>> *U, int N, int attrs, double alpha, double beta, double threshold,
+	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2);
+
 
 /*
 默认参数只需在声明的时候写出来
 */
-void CST(vector<RP*> *R, int *A, int attrs, double threshold = 0.9);
+void CST(vector<RP*> *R, int attrs, Node *Root, double threshold = 0.9);
 
 void FindingNeighbors(Node* Root, RP* r_wait, double threshold, 
 	int attrs, vector<RP*>* ret, vector<Node*> *Path);
 
-void UpdatingClustering(vector<RP*> *R, Graph *graph,
+void UpdatingClustering(vector<RP*> *R,
 	double alpha, double beta, double threshold,
 	int attrs, Node* root, double **U2, Graph *G, vector<Cluster*> *clusters);
+
+void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double threshold,
+	int attrs, Node* root, vector<vector<double>> *U2, Graph *G, vector<Cluster*> *clusters);
 
 
 //####################################################################################
 //  打印方法（用于数据显示）
 //####################################################################################
 
+void printU(vector<vector<double>> *U);
 //打印邻居集合
 void printNei(const vector<Neighbor*> *neis);
 
@@ -806,3 +851,5 @@ void printG(Graph *graph);
 void printGR(Graph *graph);
 
 void printCluster(vector<Cluster*> *clusters);
+
+void printTree(Node* root);
