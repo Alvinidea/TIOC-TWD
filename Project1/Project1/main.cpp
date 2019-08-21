@@ -72,6 +72,8 @@ void getData(string loc,vector<vector<double>> *U,int begin=0)
 	in.close();
 }
 
+
+
 void TIOC_TWD_vector()
 {
 	vector<vector<double>> *U = new vector<vector<double>>();
@@ -120,7 +122,6 @@ void TIOC_TWD_vector()
 	vector<Cluster*> *clusters2;
 
 	cout << "==============================================================" << endl;
-	cout << "4 . 使用SOC_TWD算法获取增加数据的代表点" << endl;
 	cout << "4 . 使用SOC_TWD算法获取增加数据的代表点" << endl;
 	cout << "==============================================================" << endl;
 	SOC_TWD(U2, U2->size(), 5, 0.06, 0.03, 2, R_update, &graph2, &clusters2);
@@ -188,7 +189,11 @@ void TIOC_TWD_array()
 	getchar();
 }
 
+#define RED "\033[31m" /* Red */
+#define GREEN "\033[32m" /* Green */
 int main()
 {
+	std::cout << RED << "Red Color" << std::endl;
+	std::cout << GREEN << "Green Color"  << std::endl;
 	TIOC_TWD_vector();
 }
