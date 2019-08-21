@@ -450,7 +450,7 @@ public:
 	//结点中可能存在多个代表点
 	vector<RP*> *R;
 
-	//第几个属性   或者说第几层 ith layer  Or  ith Attribute
+	//树的第几层 ith layer ，根为第0层  使用属性0 的是第一层
 	int ith;
 	//存放ith个属性的 上下界的值
 	double low;

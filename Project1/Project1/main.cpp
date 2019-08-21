@@ -191,8 +191,17 @@ void TIOC_TWD_array()
 
 #define RED "\033[31m" /* Red */
 #define GREEN "\033[32m" /* Green */
+bool cmp(int v, int y)
+{
+	return v > y;
+}
 int main()
 {
+	int arr[] = {516,8,68,56,51};
+	std::sort(arr,arr+5,cmp);
+	for (int t = 0; t < 5; t++)
+		cout << arr[t] <<"   ";
+
 	std::cout << RED << "Red Color" << std::endl;
 	std::cout << GREEN << "Green Color"  << std::endl;
 	TIOC_TWD_vector();

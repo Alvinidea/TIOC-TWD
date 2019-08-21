@@ -221,6 +221,7 @@ void merge(Node* treeNode, Node* newNode)
 	vector<Node*>::iterator it_s;
 	for (it_s = sons_Node->begin(); it_s != sons_Node->end(); it_s++)
 		treeNode->add_SonNode(*it_s);
+
 	//删除father结点的孩子结点newNode
 	Node* father = treeNode->father_Node;
 	vector<Node*> *f_s = father->sons_Node;
@@ -230,11 +231,13 @@ void merge(Node* treeNode, Node* newNode)
 	{
 		if (*it_son == newNode)
 		{
-			f_s->erase(it_son);
+			f_s->erase(it_son);//从父结点中删除 newNode 结点
 			flag = true;
 			break;
 		}
 	}
+	//孩子结点的融合后需要重新 结点计算结点的上下界
+	treeNode->computeLowAndHigh(treeNode->ith - 1);
 }
 
 //联合
@@ -243,11 +246,19 @@ bool isSimilarityNN(Node * node, Node * nnode, int layer)
 	RP *rp = nnode->R->at(0);
 	return isSimilarity(node, rp, layer);
 }
+bool isSimilarityNN(Node * curNode, Node * nNode)
+{
+	if (curNode->low > nNode->high || curNode->high < nNode->low)
+		return false;
+	else
+		return true;
+}
 
 //结点的比较函数
 bool cmpNN(Node *r1, Node *r2)
-{
-	if (r1->low > r2->low)
+{//STL 中 >大于 时候 返回true时候  为降序
+	//STL 中 <小于 时候 返回true时候  为升序
+	if (r1->low < r2->low)
 		return true;
 	return false;
 }
@@ -1239,7 +1250,7 @@ void FindingNeighbors(Node* Root, RP* r_wait, double threshold, int attrs, vecto
 	// 根结点放入到 SimilarNode[0]
 	//=========================================================================
 	vector<Node*>* rNode = new vector<Node*>();//生成根结点层
-	rNode->push_back(Root);//将根结点压入该层
+	rNode->push_back(Root);	//将根结点压入该层
 	similarNode->push_back(rNode);//将 相似层0 放入 容器
 
 	//=========================================================================
@@ -1257,16 +1268,16 @@ void FindingNeighbors(Node* Root, RP* r_wait, double threshold, int attrs, vecto
 	// 判断树的第layer层的相似结点集合的size是否为0
 	// layer 一层一层的处理
 	//=========================================================================
-	int layer = 1;//第 0 层是根结点所在的层，从第 1 层开始
-	while ((similarNode[layer]).size() != 0)
+	int similarLayer = 1;	//第 0 层是根结点所在的层，从第 1 层开始(相似层)
+	int attrlayer = 0;
+	while ((similarNode[similarLayer]).size() != 0)
 	{
 		//取出当前层的相似结点集合中需要操作的结点（在similarNode中）
-		vector<Node*>* curLayerS = (*similarNode)[layer];
-		// 产生一个新结点，并将r_wait存入该节点
-		Node* newNode = new Node(layer, NULL);
-		newNode->add_RP(r_wait);
-		// 一个标志判断是否存在相似（用newNode 和 相似集合中结点 比较）
-		bool notExistSimilarity = true;
+		vector<Node*>* curLayerS = (*similarNode)[similarLayer];
+		Node* newNode = new Node(similarLayer, NULL);// 产生一个新结点
+		newNode->add_RP(r_wait);//将r_wait加入到新节点中
+		newNode->computeLowAndHigh(attrlayer);//计算结点的Low和High值
+		bool existSimilarity = false;// 一个判断是否存在相似的标志（用newNode 和 相似集合中结点 比较）
 		//=========================================================================
 		// ( 1 )
 		//=========================================================================
@@ -1278,96 +1289,108 @@ void FindingNeighbors(Node* Root, RP* r_wait, double threshold, int attrs, vecto
 			// 计算相似性   使用Definition 5
 			//=========================================================================
 			Node *curNode = *it;
-			//计算两个结点的相似性
-			bool similarity = isSimilarityNN(curNode, newNode, layer);
+			//计算两个结点的相似性？？？？？？？？？？？？？？？？？
+			//bool similarity = isSimilarityNN(curNode, newNode, attrlayer);
+			bool similarity = isSimilarityNN(curNode,newNode);
 			//判断相似性
 			if (similarity)
 				//=========================================================================
 				// 处理第一、二种情况
 				// 代表点和结点相似 则将代表点加入到结点包含的集合之中（newNode --融合到--> curNode）
-				// 这时候是不是应该 将curNode设置为newNode？？？？？？？？？？？
+				// 这时候是不是应该 将curNode设置为newNode？   ：是的
 				//=========================================================================
 			{
-				merge(curNode, newNode);
-				newNode = curNode;//融合后的curNode变为新节点
+				merge(curNode, newNode);//将newNode融合到curNode中 融合后 
+										// 需要重新计算结点上下界(merge内部会操作)
+				newNode = curNode;		//融合后的curNode变为新节点
 				vector<Node*>* sons = curNode->sons_Node;
 				vector<Node*>::iterator it_s;
+				//将 curNode 的所有孩子结点放到ChildNode中
 				for (it_s = sons->begin(); it_s != sons->end(); it_s++)
 				{
 					ChildNode->push_back(*it_s);
 				}
-				notExistSimilarity = false;
+				existSimilarity = true;//代表存在相似结点
 			}
 		}
 		//=========================================================================
 		// 第三种情况的时候 
 		// 从当前结点开始构建一条独立的子树
+		// 若进入到此 if 语句中 那么执行完毕后可以直接跳出本函数
 		//=========================================================================
-		if (notExistSimilarity == true)
-		{//构建一条全新树的支路（从根节点开始）
+		if (existSimilarity == false)
+		{//构建一条全新树的支路（从当前节点开始）
 			P->add_SonNode(newNode);
-			while (layer < attrs)
+			while (attrlayer < attrs)
 			{
 				P = newNode;
-				layer++;
-				Node* newNode_s = new Node(layer, NULL);
+				attrlayer++;
+				Node* newNode_s = new Node(attrlayer, NULL);
 				newNode_s->add_RP(r_wait);
-				//
 				P->add_SonNode(newNode);
 			}
 			return;
 			//break;
 		}
-		//将当前结点P指向 newNode ，并且放入路径Path中 （Path在算法四的时候会使用）
-		P = newNode;
-		Path->push_back(P);
-
-		//----------???????????????????????排序结点
-		sort(ChildNode->begin(), ChildNode->end(), cmpNN);
-
-		//新的 similarNode 中的一个对象
-		vector<Node*>* vNode = new vector<Node*>();
+		//=========================================================================
+		// 路径 和 排序 
+		//=========================================================================
+		P = newNode;		//将当前结点P指向 newNode
+		Path->push_back(P);	//并且放入路径Path中 （Path在算法四的时候会使用）
+		std::sort(ChildNode->begin(), ChildNode->end(), cmpNN);// 排序结点 使用升序
+		vector<Node*>* vNodes = new vector<Node*>();// 新的 similarNode 中的一个对象
 		//=========================================================================
 		// ( 2 )
 		//=========================================================================
-		//取出存放ChildNode中第一个
+		//取出存放ChildNode中第一个结点
 		Node* pNode = ChildNode->at(0);
 		Node *nextNode;
-		vector<Node*>::iterator it_s;
-
+		vector<Node*>::iterator it_s;//迭代器
+		// (1) (2) (3) (4) (5) (6) (7) ; 
+		// pNode=(1)  nextNode = (2)
+		// pNode , nextNode 若融合(相似)，则pNode = (1,2)，nextNode=(3)
+		// pNode , nextNode 若不融合(不相似)，则pNode = (2)，nextNode=(3)
 		for (it_s = ChildNode->begin() + 1; it_s != ChildNode->end(); it_s++)
 		{
 			nextNode = *it_s;
-			bool similarity = isSimilarityNN(pNode, nextNode, layer);
+			//bool similarity = isSimilarityNN(pNode, nextNode, attrlayer);
+			bool similarity = isSimilarityNN(pNode, nextNode);
 			//判断相似性
 			if (similarity)
-			{	//代表点和结点相似 则将代表点加入到结点包含的集合之中
-				merge(pNode, nextNode);
+			{	//将nextNode融合到pNode中
+				// merge操作 融合的是树中的结点   不会影响到ChildNode
+				merge(pNode, nextNode);//。。。。。。。。。。。。。。。。。。。。。。。。。。。。
 			}
 			else
-			{//保证pNode 和nextNode结点的相邻
-				vNode->push_back(pNode);
-				pNode = nextNode;
+			{//保证 pNode 和 nextNode 结点的相邻
+				vNodes->push_back(pNode);//将 ChildNode中结点 加入到 新的相似层
+				pNode = nextNode;//
 			}
 		}
 		//similarNode添加一层相似结点层
-		similarNode->push_back(vNode);
+		similarNode->push_back(vNodes);
 
-		//到了查询树的最后一层的时候
-		if (layer == attrs)
+		//=========================================================================
+		// ( 4 ) 到了查询树的最后一层的时候
+		// 最后计算 newNode结点中的代表点中心和r_wait的距离 
+		// 将其保存在r_wait的邻居代表点集合中
+		//=========================================================================
+		if (similarLayer == attrs)
 		{
-			vector<RP*> *rps = newNode->R;
-			vector<RP*>::iterator it_r;
+			vector<RP*> *rps = newNode->R;	//获取 newNode 包含的代表点集合
+			vector<RP*>::iterator it_r;		//迭代器
 			for (it_r = rps->begin(); it_r != rps->end(); it_r++)
 			{
 				RP* rp = *it_r;
 				if (rp != r_wait && getRPDistance(rp, r_wait, attrs) <= 2 * threshold)
 				{
-					ret->push_back(rp);
+					ret->push_back(rp);//
 				}
 			}
 		}
-		layer++;
+
+		similarLayer++;
+		attrlayer++;
 	}
 }
 
@@ -1394,10 +1417,11 @@ void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double thresh
 	vector<Node*>::iterator it_node;
 	for (R_itor = R->begin(); R_itor != R->end(); R_itor++)
 	{
-		RP* r_wait = *R_itor;
-		vector<RP*>* R_neighbor = new vector<RP*>();
+		//-------------------------------------------------------------------????????????
+		RP* r_wait = *R_itor;							//取出代表点指针
+		vector<RP*>* R_neighbor = new vector<RP*>();	//r_wait 代表点的邻居代表点集合
 		vector<Node*> *Path = new vector<Node*>();
-
+		//-------------------------------------------------------------------????????????
 		//（1）=========================================================================
 		//	获取r_wait的邻居结点集合（调用算法三）
 		//=========================================================================
