@@ -883,6 +883,7 @@ Output:
 void FindingNeighbors(Node* Root, RP* r_wait, double threshold, int attrs, 
 	vector<RP*>* retR_nei, vector<Node*> *Path)
 {
+	printTree(Root);
 	//=========================================================================
 	// layer 表示当前操作 查询树的第layer层    根结点在第0层
 	// similarNode 表示相似结点 similarNode[0] 表示第0层的相似结点
@@ -985,9 +986,9 @@ void FindingNeighbors(Node* Root, RP* r_wait, double threshold, int attrs,
 		//=========================================================================
 		P = newNode;		//将当前结点P指向 newNode
 		Path->push_back(P);	//并且放入路径Path中 （Path在算法四的时候会使用）
-		printNode(ChildNode);
+		//printNode(ChildNode);
 		std::sort(ChildNode->begin(), ChildNode->end(), cmpNN);// 排序结点 使用升序
-		printNode(ChildNode);
+		//printNode(ChildNode);
 		vector<Node*>* simiNodes = new vector<Node*>();// 新的 similarNode 中的一个对象
 		//=========================================================================
 		// ( 2 ) 产生下一个循环的 相似结点层
@@ -1049,6 +1050,8 @@ void FindingNeighbors(Node* Root, RP* r_wait, double threshold, int attrs,
 			attrlayer++;
 		}
 	}
+
+	printTree(Root);
 }
 
 
@@ -1072,7 +1075,10 @@ void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double thresh
 {
 	vector<RP*>::iterator R_itor;
 	vector<Node*>::iterator it_node;
-	for (R_itor = R->begin(); R_itor != R->end(); R_itor++)
+	for (R_itor = R->begin(); 
+		//R_itor != R->end();
+		R_itor != R->begin() + 3;
+		R_itor++)
 	{
 		//-------------------------------------------------------------------????????????
 		RP* r_wait = *R_itor;							//取出代表点指针
@@ -1082,10 +1088,9 @@ void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double thresh
 		//（1）=========================================================================
 		//	获取r_wait的邻居结点集合（调用算法三）
 		//=========================================================================
-		printTree(root);
+		
 		FindingNeighbors(root, r_wait, threshold, attrs, R_neighbor, Path);
-		printTree(root);
-
+		cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
 		vector<int>::iterator it_x;		//迭代器 用于迭代r_wait的覆盖域的对象
 		vector<int>* cover = (r_wait->Cover);
 		//存储没有映射到R_neighbor的记录|对象
@@ -1102,7 +1107,8 @@ void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double thresh
 		//			否则： 将记录x放入到存放无映射对象的集合noMapping中
 		//=========================================================================
 		vector<RP*>::iterator it_rp;
-		for (it_x = cover->begin(); it_x != cover->end(); it_x++)
+		for (it_x = cover->begin(); it_x != cover->end(); 
+			it_x++)
 		{//r_wait的覆盖域的对象: it_x
 			double x = *it_x;
 			flag = true;//
@@ -1237,6 +1243,9 @@ void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double thresh
 		newN++;
 		clusters->push_back(Cx);
 	}
+	printG(G);
+	printGR(G);
+	printCluster(clusters);
 }
 
 //=================================================================================================

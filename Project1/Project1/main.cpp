@@ -96,8 +96,10 @@ void TIOC_TWD()
 	vector<vector<double>>::iterator it_U;
 	for (it_U = U2->begin(); it_U != U2->end(); it_U++)
 		U->push_back(*it_U);
+
+	vector<Cluster*> *clusters_new = new vector<Cluster*>();
 	UpdatingClustering(R_update, 0.06, 0.03, 2,
-		ATTRIBUTES, Root, U, graph, clusters);
+		ATTRIBUTES, Root, U, graph, clusters_new);
 
 	getchar();
 }

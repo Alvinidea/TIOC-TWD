@@ -63,12 +63,13 @@ public:
 	}
 	~X()
 	{
+		/*
 		cout << no << " : ";
 		for (int i = 0; i < 5; i++)
 			//v[i+1] 应为U[i][0]  存放的是记录的编号 U[i][ 1 到 attrs-1]存的才是属性值 
 			cout<< "   "<< val[i];
 		cout << endl;
-		//delete[] val;
+		//delete[] val;*/
 	}
 	//获取属性值
 	double getVal(int i)
