@@ -120,7 +120,6 @@ public:
 	}
 };
 
-
 /*
 -- 代表点Representation point
 -- representationPoint : 代表记录
@@ -243,7 +242,6 @@ public:
 		right[i] = val;
 	}
 };
-
 
 class Distance {
 public:
@@ -413,7 +411,6 @@ public:
 	}
 };
 
-
 //center记录代表点邻居集合   的    类
 class RNeighbor {
 public:
@@ -553,7 +550,6 @@ class Similarity
 	}
 
 };
-
 
 class Graph {
 public:
@@ -791,28 +787,27 @@ public:
 bool cmpNeighbor(const Neighbor *nFirst, const Neighbor *nSecond);
 //获取根据记录号获取 记录的邻居集合
 vector<int>* getNeighborByRecord(vector<Neighbor*> *neighbors, int record);
-/*
+/*===========================================================
 -- 计算代表点之间的欧里几德距离
-*/
+===========================================================*/
 double getRPDistance(RP *x, RP *y, int attrs);
-/*
+/*===========================================================
 计算两个代表点的相似度
 Similarity = 【  Cover(i) 交 Cover(j) 】 / min{Cover(i) ，Cover(j)}
-*/
+===========================================================*/
 double computeSimilarity(RP* ri, RP* rj);
-//####################################################################################
-//算法3  4 公共算法的声明
-//####################################################################################
+
 bool isSimilarity(Node * node, RP* rp, int layer);
 
 bool isSimilarityNN(Node * node, Node * nnode, int layer);
 
 //获取结点数目
 int getINodesI(set<Node*> *Nodes);
-//RP结点的比较函数
-bool cmpRP(RP *r1, RP *r2);
+
+//RP结点集合的排序函数 使用快速排序
 void QSort(vector<RP*>* ivec, vector<RP*>::iterator low, vector<RP*>::iterator high, int layer);
-vector<RP*>::iterator Partition(vector<RP*>*, vector<RP*>::iterator low, vector<RP*>::iterator high, int layer);
+vector<RP*>::iterator Partition(vector<RP*>*, vector<RP*>::iterator low, 
+	vector<RP*>::iterator high, int layer);
 bool cmpRP_Big(RP* r1, RP* r2, int layer);
 bool cmpRP_Small(RP* r1, RP* r2, int layer);
 
@@ -828,8 +823,6 @@ alpha
 beta
 threshold 阈值
 */
-void SOC_TWD(double *U[], int N, int attrs, double alpha, double beta, double threshold,
-	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2);
 void SOC_TWD(vector<vector<double>> *U, int N, int attrs, double alpha, double beta, double threshold,
 	vector<RP*> *R, Graph **Graph2, vector<Cluster*> **clusters2);
 
@@ -840,10 +833,6 @@ void CST(vector<RP*> *R, int attrs, Node *Root, double threshold = 0.9);
 
 void FindingNeighbors(Node* Root, RP* r_wait, double threshold, 
 	int attrs, vector<RP*>* ret, vector<Node*> *Path);
-
-void UpdatingClustering(vector<RP*> *R,
-	double alpha, double beta, double threshold,
-	int attrs, Node* root, double **U2, Graph *G, vector<Cluster*> *clusters);
 
 void UpdatingClustering(vector<RP*> *R, double alpha, double beta, double threshold,
 	int attrs, Node* root, vector<vector<double>> *U2, Graph *G, vector<Cluster*> *clusters);
